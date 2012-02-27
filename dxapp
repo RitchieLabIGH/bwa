@@ -1,0 +1,13 @@
+{
+  "code": "bwa.js",
+  "input_spec": {
+    "leftReads": "table",
+    "rightReads": "table",
+    "bwaGenomeArchive": "file",
+    "chromosomes": "object",
+    "runtimeArgs": "object"
+  },
+  "output_spec": {
+    "mappings": "coords_table"
+  }
+}
