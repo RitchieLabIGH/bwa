@@ -1,13 +1,17 @@
 {
-  "code": "bwa.js",
-  "input_spec": {
-    "leftReads": "table",
-    "rightReads": "table",
-    "bwaGenomeArchive": "file",
-    "chromosomes": "object",
-    "runtimeArgs": "object"
-  },
-  "output_spec": {
-    "mappings": "coords_table"
-  }
+  "name": "pybwa",
+  "dxapi": "1.03rc",
+  "version": "0.1",
+  "inputs": [
+    {"name": "leftReads", "class": "table"},
+    {"name": "rightReads", "class": "table"},
+    {"name": "bwaGenomeArchive", "class": "file"},
+    {"name": "chromosomes", "class": "json"},
+    {"name": "rowFetchChunk", "class": "int", "default": 15000000},
+    {"name": "rowLimit", "class": "int", "default": 0}
+  ],
+  "outputs": [
+    {"name": "mappings", "class": "table"}
+  ],
+  "run": {"file": "bwa.py", "interpreter": "python2.7"}
 }
