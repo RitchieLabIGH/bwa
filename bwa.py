@@ -79,9 +79,6 @@ def main():
     rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['size']
     rowFetchChunk = job['input']['rowFetchChunk']
     rowLimit = job['input']['rowLimit']
-    print "\nrowCount = %d" % (rowCount)
-    print dxpy.open_dxtable(job['input']['leftReads']).describe()
-    print "\nrowLimit = %d; rowfetchchunk = %d\n" % (rowLimit, rowFetchChunk);
     if (rowLimit > 0):
         rowCount = min(rowCount, rowLimit)
     chunkCount = int(ceil(float(rowCount) / float(rowFetchChunk)))
@@ -104,17 +101,17 @@ def main():
             'tableId': tableId
         }
         # Run a "map" job for each chunk
-        mapJobId = dxpy.new_dxjob(fn_input=mapInput, fn_name="map")
+        mapJobId = dxpy.new_dxjob(fn_input=mapInput, fn_name="map").get_id()
         reduceInput["mapJob" + str(i) + "TableId"] = {'job': mapJobId, 'field': 'id'}
 
     # Run a "reduce" job
     reduceInput['tableId'] = tableId
-    reduceJobId = dxpy.new_dxjob(fn_input=reduceInput, fn_name="reduce")
+    reduceJobId = dxpy.new_dxjob(fn_input=reduceInput, fn_name="reduce").get_id()
     job['output'] = {'mappings': {'job': reduceJobId, 'field': 'mappings'}}
 
 def map():
-    subprocess.check_call("dx_fetchReadsTableAsFastq " + job['input']['leftReads'] + " " + job['input']['from'] + " " + job['input']['to'] + " >  left.fq", shell=True)
-    subprocess.check_call("dx_fetchReadsTableAsFastq " + job['input']['rightReads'] + " " + job['input']['from'] + " " + job['input']['to'] + " >  right.fq", shell=True)
+    subprocess.check_call("dx_tableToFastq %s --start_row %d --end_row %d > left.fq" % (job['input']['leftReads'], job['input']['from'], job['input']['to']), shell=True)
+    subprocess.check_call("dx_tableToFastq %s --start_row %d --end_row %d > right.fq" % (job['input']['rightReads'], job['input']['from'], job['input']['to']), shell=True)
     dxpy.download_dxfile(job['input']['bwaGenomeArchive'], 'genome.tgz')
 
     subprocess.check_call("tar zxf genome.tgz", shell=True)
