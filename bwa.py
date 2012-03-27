@@ -79,7 +79,7 @@ def main():
     rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['size']
     if (job['input']['rowLimit'] > 0):
         rowCount = min(rowCount,rowLimit)
-
+    rowFetchChunk = job['input']['rowFetchChunk']
     chunkCount = int(ceil(rowCount / rowFetchChunk))
     chunkSize = int(floor(rowCount / chunkCount))
     
