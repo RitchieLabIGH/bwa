@@ -119,7 +119,6 @@ def map():
     subprocess.check_call("bwa sampe genome.fa left.fq.sai right.fq.sai left.fq right.fq >out.sam", shell=True)
     
     subprocess.check_call("dx_storeSamAsMappingsTable out.sam " + job['input']['tableId'] + " " + job['input']['chromosomes'], shell=True)
-
     job['output']['id'] = job['input']['tableId']
 
 def reduce():
