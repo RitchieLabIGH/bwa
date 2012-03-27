@@ -77,12 +77,13 @@ def main():
     tableId = dxpy.new_dxtable(mappings_schema).get_id()
     # rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['numRows']
     rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['size']
-    if (job['input']['rowLimit'] > 0):
-        rowCount = min(rowCount,rowLimit)
     rowFetchChunk = job['input']['rowFetchChunk']
+    rowLimit = job['input']['rowLimit']
+    if (rowLimit > 0):
+        rowCount = min(rowCount, rowLimit)
     chunkCount = int(ceil(rowCount / rowFetchChunk))
     chunkSize = int(floor(rowCount / chunkCount))
-    
+
     reduceInput = {}
 
     # Iterate over chunks
