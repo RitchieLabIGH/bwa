@@ -61,8 +61,8 @@ def main():
     mappings_schema = [
         "QNAME:string",
         "FLAG:int32",
-        "chr:int32", # RNAME
-        "start:double", # POS
+        "chr:string", # RNAME
+        "start:int32", # POS
         "MAPQ:int32",
         "CIGAR:string",
         "RNEXT:string",
@@ -71,7 +71,7 @@ def main():
         "SEQ:string",
         "QUAL:string",
         "OPT:string",
-        "stop:double"
+        "stop:int32"
     ]
 
     tableId = dxpy.new_dxtable(mappings_schema).get_id()
