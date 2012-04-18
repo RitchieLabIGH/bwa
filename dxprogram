@@ -3,15 +3,15 @@
   "dxapi": "1.03rc",
   "version": "0.1",
   "inputs": [
-    {"name": "leftReads", "class": "table"},
-    {"name": "rightReads", "class": "table"},
+    {"name": "leftReads", "class": "gtable"},
+    {"name": "rightReads", "class": "gtable"},
     {"name": "bwaGenomeArchive", "class": "file"},
-    {"name": "chromosomes", "class": "json"},
+    {"name": "chromosomes", "class": "record"},
     {"name": "rowFetchChunk", "class": "int", "default": 15000000},
     {"name": "rowLimit", "class": "int", "default": 0}
   ],
   "outputs": [
-    {"name": "mappings", "class": "table"}
+    {"name": "mappings", "class": "gtable"}
   ],
   "run": {"file": "bwa.py", "interpreter": "python2.7"}
 }
