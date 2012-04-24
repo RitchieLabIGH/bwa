@@ -52,31 +52,33 @@ TODO: update docs for python port
 '''
 
 import dxpy
-import subprocess
+import subprocess, logging
 from math import floor, ceil
+
+logging.basicConfig(level=logging.DEBUG)
 
 def main():
     # Create a table for the mappings
     # See http://samtools.sourceforge.net/SAM1.pdf
     mappings_schema = [
-        "QNAME:string",
-        "FLAG:int32",
-        "chr:string", # RNAME
-        "start:int32", # POS
-        "MAPQ:int32",
-        "CIGAR:string",
-        "RNEXT:string",
-        "PNEXT:int32",
-        "TLEN:int32",
-        "SEQ:string",
-        "QUAL:string",
-        "OPT:string",
-        "stop:int32"
+        {"name": "QNAME", "type": "string"},
+        {"name": "FLAG", "type": "int32"},
+        {"name": "chr", "type": "string"}, # RNAME
+        {"name": "start", "type": "int32"}, # POS
+        {"name": "MAPQ", "type": "int32"},
+        {"name": "CIGAR", "type": "string"},
+        {"name": "RNEXT", "type": "string"},
+        {"name": "PNEXT", "type": "int32"},
+        {"name": "TLEN", "type": "int32"},
+        {"name": "SEQ", "type": "string"},
+        {"name": "QUAL", "type": "string"},
+        {"name": "OPT", "type": "string"},
+        {"name": "stop", "type": "int32"},
     ]
 
-    tableId = dxpy.new_dxtable(mappings_schema).get_id()
-    # rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['numRows']
-    rowCount = dxpy.open_dxtable(job['input']['leftReads']).describe()['size']
+    tableId = dxpy.new_dxgtable(mappings_schema).get_id()
+    # rowCount = dxpy.open_dxgtable(job['input']['leftReads']).describe()['numRows']
+    rowCount = dxpy.open_dxgtable(job['input']['leftReads']).describe()['size']
     rowFetchChunk = job['input']['rowFetchChunk']
     rowLimit = job['input']['rowLimit']
     if (rowLimit > 0):
@@ -92,10 +94,10 @@ def main():
         _from = i
         to = min(_from + chunkSize - 1, rowCount - 1)
         mapInput = {
-            'leftReads': job['input']['leftReads'],
-            'rightReads': job['input']['rightReads'],
-            'bwaGenomeArchive': job['input']['bwaGenomeArchive'],
-            'chromosomes': job['input']['chromosomes'],
+            'leftReads': job['input']['leftReads']['$dnanexus_link'],
+            'rightReads': job['input']['rightReads']['$dnanexus_link'],
+            'bwaGenomeArchive': job['input']['bwaGenomeArchive']['$dnanexus_link'],
+            'chromosomes': job['input']['chromosomes']['$dnanexus_link'],
             'from': _from,
             'to': to,
             'tableId': tableId
@@ -123,6 +125,6 @@ def map():
     job['output']['id'] = job['input']['tableId']
 
 def reduce():
-    t = dxpy.open_dxtable(job['input']['tableId'])
+    t = dxpy.open_dxgtable(job['input']['tableId'])
     t.close()
     job['output']['mappings'] = t.get_id()
