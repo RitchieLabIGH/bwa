@@ -3,7 +3,7 @@
   "dxapi": "1.03rc",
   "version": "0.1",
   "inputs": [
-    {"name": "reads", "class": "gtable", "type": {"$or": ["LetterReads", "FlowReads"]}},
+    {"name": "reads", "class": "array:gtable", "type": {"$or": ["LetterReads", "FlowReads"]}},
     {"name": "trimming", "class": "string", "optional": true},
     {"name": "reference", "class": "record", "type": "ContigSet", "optional": true},
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1", "optional": true},
@@ -39,7 +39,7 @@
     {"name": "sw_N", "class": "int", "optional": true}
   ],
   "outputs": [
-    {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
+    {"name": "mappings", "class": "array:gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1"}
   ],
   "run": {"file": "bwa.py", "interpreter": "python2.7"}
