@@ -1,56 +1,3 @@
-'''
-
-TODO: update docs for python port
-
-// The BWA app
-//
-// To create this app, call the create app route with the contents of this file as
-// the code, and the following specs:
-//
-// input_spec:
-//
-// {
-//   leftReads: table,
-//   rightReads: table,
-//   bwaGenomeArchive: file
-//   chromosomes: object
-//   runtimeArgs: object
-// }
-//
-// output_spec:
-//
-// {
-//   mappings: coords_table
-// }
-//
-//
-// The two reads tables must be made from a fastq file (this app does not deal
-// with the exact schema of the leftReads and rightReads tables as it expects
-// to call a helper for converting to fastq)
-//
-// The bwaGenomeArchive must be a .tar.gz file which contains the following
-// files:
-//
-// genome.fa
-// genome.fa.amb
-// genome.fa.ann
-// genome.fa.bwt
-// genome.fa.fai
-// genome.fa.pac
-// genome.fa.sa
-//
-// The chromosomes object must have a property called chromosomes that contains an
-// array of "chromosomes" (where a "chromosome" is an array of three values:
-// a chromosome name ("chr1"), index (0), and size (249250621)).
-// See ../../push_hg19.js for an example.
-//
-// runtimeArgs: 
-// {
-//   rowFetchChunk: <split input reads into chunks of approx this many rows>, 
-//   rowLimit: <process at most this many rows. 0 = process all table rows> 
-// }
-'''
-
 import dxpy
 import subprocess, logging
 from math import floor, ceil
@@ -58,6 +5,14 @@ from math import floor, ceil
 logging.basicConfig(level=logging.DEBUG)
 
 def main():
+    t = dxpy.new_dxgtable([{"name": "leMapping", "type": "string"}])
+    t.add_types(["LetterMappings", "Mappings"])
+    t.add_types(["BwaLetterContigSetV1"])
+    t.close(block=True)
+    f = dxpy.upload_local_file("/bin/ls", wait_on_close=True)
+    job['output'] = {'mappings': [dxpy.dxlink(t)], 'indexed_reference': dxpy.dxlink(f)}
+
+def old_main():
     # Create a table for the mappings
     # See http://samtools.sourceforge.net/SAM1.pdf
     mappings_schema = [
@@ -111,7 +66,7 @@ def main():
     reduceJobId = dxpy.new_dxjob(fn_input=reduceInput, fn_name="reduce").get_id()
     job['output'] = {'mappings': {'job': reduceJobId, 'field': 'mappings'}}
 
-def map():
+def old_map():
     subprocess.check_call("dx_tableToFastq %s --start_row %d --end_row %d > left.fq" % (job['input']['leftReads'], job['input']['from'], job['input']['to']), shell=True)
     subprocess.check_call("dx_tableToFastq %s --start_row %d --end_row %d > right.fq" % (job['input']['rightReads'], job['input']['from'], job['input']['to']), shell=True)
     dxpy.download_dxfile(job['input']['bwaGenomeArchive'], 'genome.tgz')
@@ -124,7 +79,7 @@ def map():
     subprocess.check_call("dx_storeSamAsMappingsTable out.sam " + job['input']['tableId'] + " " + job['input']['chromosomes'], shell=True)
     job['output']['id'] = job['input']['tableId']
 
-def reduce():
+def old_reduce():
     t = dxpy.open_dxgtable(job['input']['tableId'])
     t.close()
     job['output']['mappings'] = t.get_id()
