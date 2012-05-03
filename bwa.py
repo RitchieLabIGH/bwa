@@ -21,7 +21,9 @@ def main():
     
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
-    if 'indexed_reference' not in job['input']:
+    if 'indexed_reference' in job['input']:
+        job['output']['indexed_reference'] = job['input']['indexed_reference']
+    else:
         job['output']['indexed_reference'] = make_indexed_reference()
     
     table_columns = [("sequence", "string")]
@@ -57,11 +59,55 @@ def main():
     
     column_descriptors = [dxpy.DXGTable.make_column_desc(name, type) for name, type in table_columns]
     
-    t = dxpy.new_dxgtable(column_descriptors)
-    
-    # Add GRI
-
+    gri_index = dxpy.DXGTable.genomic_range_index("chr", "lo", "hi")
+    t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     t.add_types(["LetterMappings", "Mappings"])
+
+    row_offsets = {}; row_cursor = 0
+    for reads_id, description in reads_descriptions.items():
+        row_offsets[reads_id] = row_cursor
+        row_cursor += description["size"]
+
+    # FIXME: chunking
+
+    chunk_size = 25000000
+    
+    
+
+    map_job_inputs = job["input"].copy()
+    map_job_inputs["start_row"] = 0
+    map_job_inputs["num_rows"] = chunk_size
+    map_job_inputs["table_id"] = t.get_id()
+    map_job_inputs["indexed_reference"] = job['output']['indexed_reference']
+    
+    map_job = dxpy.new_dxjob(map_job_inputs, "map")
+
+    postprocess_job_inputs = job["input"].copy()
+    postprocess_job_inputs["table_id"] = t.get_id()
+    postprocess_job_inputs["indexed_reference"] = job['output']['indexed_reference']
+    postprocess_job_inputs["chunk1result"] = {'job': map_job.get_id(), 'field': 'ok'}
+
+    postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
+
+    # Scan through reads, computing start row offset
+    # Save start row offsets in a record
+    # Spawn map jobs, parameters: passthrough all params plus start_row, num_rows
+
+    # In map job:
+    # Convert with dx_tableToFastq or dx_tableToFasta depending on quality column presence
+    #   - Rewrite to support trimming of FlowReads
+    # Map with params; use the apparent number of cpus in bwa aln
+    # 
+
+    # job['output']['mappings'] = JBOR (TODO: how do JBORs interact with array outputs?)
+
+def map():
+    print "Map:", job["input"]
+    job["output"]["ok"] = True
+
+def postprocess():
+    print "Postprocess:", job["input"]
+    t = dxpy.DXGTable(job["input"]["table_id"])
     t.close(block=True)
     f = dxpy.upload_local_file("/bin/ls", keep_open=True)
     f.add_types(["BwaLetterContigSetV1"])
