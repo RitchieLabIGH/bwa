@@ -26,7 +26,7 @@ def make_indexed_reference():
     indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
     indexed_ref_dxfile.set_details({'originalContigSet': job['input']['reference']})
     indexed_ref_dxfile.close()
-    return indexed_ref_dxfile.get_id()
+    return indexed_ref_dxfile
 
 def main():
     reads_inputs = job['input']['reads']
@@ -45,7 +45,7 @@ def main():
     if 'indexed_reference' in job['input']:
         job['output']['indexed_reference'] = job['input']['indexed_reference']
     else:
-        job['output']['indexed_reference'] = make_indexed_reference()
+        job['output']['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
     
     table_columns = [("sequence", "string")]
     if reads_have_names:
@@ -124,6 +124,22 @@ def main():
     print "MAIN OUTPUT:", job['output']
 
 def map():
+    dxpy.download_dxfile(job["input"]["indexed_reference"], "reference.tar.xz")
+
+    # TODO: Start this async...
+    subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
+
+    # Start async multiprocessing pool mappings->fastq fetch here
+    # Wait on async unpack here
+
+    if job["input"]["algorithm"] == "bwasw":
+        pass
+        #subprocess.check_call("bwa bwasw ...", shell=True)
+    else:
+        # algorithm = aln or auto. TODO: check what auto should do
+        pass
+        #subprocess.check_call("bwa aln ...", shell=True)
+
     print "Map:", job["input"]
     job["output"]["ok"] = True
 
