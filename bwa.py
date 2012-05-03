@@ -1,11 +1,32 @@
 import dxpy
-import subprocess, logging
+import subprocess, logging, os
 from math import floor, ceil
 
 logging.basicConfig(level=logging.DEBUG)
 
 def make_indexed_reference():
-    pass
+    logging.info("Indexing reference genome")
+    # TODO: get implementation of fasta fetcher from Joe
+    # This is a debug stub only
+    ref_details = dxpy.DXRecord(job['input']['reference']['$dnanexus_link']).get_details()
+    seq_name = ref_details['contigs']['names'][0]
+    seq_file_id = ref_details['flat_sequence_file']['$dnanexus_link']
+    with open("reference.fasta", "wb") as fh:
+        fh.write(">"+seq_name+"\n")
+    dxpy.download_dxfile(seq_file_id, "reference.fasta", append=True)
+
+    # TODO: test if the genomes near the boundary work OK
+    if sum(ref_details['contigs']['sizes']) < 2*1024*1024*1024:
+        subprocess.check_call("bwa index -a is reference.fasta", shell=True)
+    else:
+        subprocess.check_call("bwa index -a bwtsw reference.fasta", shell=True)
+
+    subprocess.check_call("tar -cJf reference.tar.xz reference.fasta*", shell=True)
+    indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
+    indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
+    indexed_ref_dxfile.set_details({'originalContigSet': job['input']['reference']})
+    indexed_ref_dxfile.close()
+    return indexed_ref_dxfile.get_id()
 
 def main():
     reads_inputs = job['input']['reads']
@@ -36,8 +57,7 @@ def main():
                           ("lo", "int32"),
                           ("hi", "int32"),
                           ("negative_strand", "boolean"),
-                          #("error_probability", "uint8"),
-                          ("error_probability", "int32"),
+                          ("error_probability", "uint8"),
                           ("qc", "string"),
                           ("cigar", "string"),
                           ("template_id", "int64")])
@@ -84,7 +104,6 @@ def main():
 
     postprocess_job_inputs = job["input"].copy()
     postprocess_job_inputs["table_id"] = t.get_id()
-    postprocess_job_inputs["indexed_reference"] = job['output']['indexed_reference']
     postprocess_job_inputs["chunk1result"] = {'job': map_job.get_id(), 'field': 'ok'}
 
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
@@ -99,7 +118,10 @@ def main():
     # Map with params; use the apparent number of cpus in bwa aln
     # 
 
-    # job['output']['mappings'] = JBOR (TODO: how do JBORs interact with array outputs?)
+    # (TODO: how do JBORs interact with array outputs?)
+    job['output']['mappings'] = {'job': postprocess_job.get_id(), 'field': 'mappings'}
+
+    print "MAIN OUTPUT:", job['output']
 
 def map():
     print "Map:", job["input"]
@@ -109,11 +131,7 @@ def postprocess():
     print "Postprocess:", job["input"]
     t = dxpy.DXGTable(job["input"]["table_id"])
     t.close(block=True)
-    f = dxpy.upload_local_file("/bin/ls", keep_open=True)
-    f.add_types(["BwaLetterContigSetV1"])
-    f.close(block=True)
     job['output']['mappings'] = [dxpy.dxlink(t)]
-    job['output']['indexed_reference'] = dxpy.dxlink(f)
 
 def old_main():
     # Create a table for the mappings
