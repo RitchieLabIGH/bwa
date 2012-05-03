@@ -4,13 +4,70 @@ from math import floor, ceil
 
 logging.basicConfig(level=logging.DEBUG)
 
+def make_indexed_reference():
+    pass
+
 def main():
-    t = dxpy.new_dxgtable([{"name": "leMapping", "type": "string"}])
+    reads_inputs = job['input']['reads']
+    reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
+    reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
+    reads_columns = {r: desc['columns'] for r, desc in reads_descriptions.items()}
+    
+    all_reads_have_FlowReads_tag = all(['FlowReads' in desc['types'] for desc in reads_descriptions.values()])
+    all_reads_have_LetterReads_tag = all(['LetterReads' in desc['types'] for desc in reads_descriptions.values()])
+    reads_have_names = any(['name' in columns for columns in reads_columns.values()])
+    reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
+    reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
+    
+    assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
+    
+    if 'indexed_reference' not in job['input']:
+        job['output']['indexed_reference'] = make_indexed_reference()
+    
+    table_columns = [("sequence", "string")]
+    if reads_have_names:
+        table_columns.append(("names", "string"))
+    if reads_have_qualities:
+        table_columns.append(("quality", "string"))
+    table_columns.extend([("status", "string"),
+                          ("chr", "string"),
+                          ("lo", "int32"),
+                          ("hi", "int32"),
+                          ("negative_strand", "boolean"),
+                          #("error_probability", "uint8"),
+                          ("error_probability", "int32"),
+                          ("qc", "string"),
+                          ("cigar", "string"),
+                          ("template_id", "int64")])
+    if reads_are_paired:
+        table_columns.extend([("mate_id", "string"),
+                              ("status2", "string"),
+                              ("chr2", "string"),
+                              ("lo2", "int32"),
+                              ("hi2", "int32"),
+                              ("negative_strand2", "boolean"),
+                              ("proper_pair", "boolean")])
+    if all_reads_have_FlowReads_tag:
+        table_columns.extend([("flowgram", "string"),
+                              ("flow_indices", "string"),
+                              ("clip_qual_left", "int32"),
+                              ("clip_qual_right", "int32"),
+                              ("clip_adapter_left", "int32"),
+                              ("clip_adapter_right", "int32")])
+    
+    column_descriptors = [dxpy.DXGTable.make_column_desc(name, type) for name, type in table_columns]
+    
+    t = dxpy.new_dxgtable(column_descriptors)
+    
+    # Add GRI
+
     t.add_types(["LetterMappings", "Mappings"])
-    t.add_types(["BwaLetterContigSetV1"])
     t.close(block=True)
-    f = dxpy.upload_local_file("/bin/ls", wait_on_close=True)
-    job['output'] = {'mappings': [dxpy.dxlink(t)], 'indexed_reference': dxpy.dxlink(f)}
+    f = dxpy.upload_local_file("/bin/ls", keep_open=True)
+    f.add_types(["BwaLetterContigSetV1"])
+    f.close(block=True)
+    job['output']['mappings'] = [dxpy.dxlink(t)]
+    job['output']['indexed_reference'] = dxpy.dxlink(f)
 
 def old_main():
     # Create a table for the mappings
