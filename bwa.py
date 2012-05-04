@@ -88,23 +88,22 @@ def main():
         row_offsets[reads_id] = row_cursor
         row_cursor += description["size"]
 
-    # FIXME: chunking
-
     chunk_size = 25000000
-    
-    
+    chunk_size = 30000
 
     map_job_inputs = job["input"].copy()
-    map_job_inputs["start_row"] = 0
     map_job_inputs["num_rows"] = chunk_size
     map_job_inputs["table_id"] = t.get_id()
     map_job_inputs["indexed_reference"] = job['output']['indexed_reference']
-    
-    map_job = dxpy.new_dxjob(map_job_inputs, "map")
 
     postprocess_job_inputs = job["input"].copy()
     postprocess_job_inputs["table_id"] = t.get_id()
-    postprocess_job_inputs["chunk1result"] = {'job': map_job.get_id(), 'field': 'ok'}
+    
+    for start_row in xrange(0, row_cursor, chunk_size):
+        map_job_inputs["start_row"] = start_row
+        map_job = dxpy.new_dxjob(map_job_inputs, "map")
+        print "Launched map job with", map_job_inputs
+        postprocess_job_inputs["chunk%dresult" % row_cursor] = {'job': map_job.get_id(), 'field': 'ok'}
 
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
@@ -141,24 +140,25 @@ def run_shell(command):
     logging.debug("Running "+command)
     subprocess.check_call(command, shell=True)
 
-def run_alignment(algorithm, filename1, filename2=None):
+def run_alignment(algorithm, reads_file1, reads_file2=None):
     if algorithm == "bwasw":
-        if filename2 is not None:
-            run_shell("bwa bwasw reference.fasta %s %s > %s.sai" % (filename1, filename2, filename1))
-            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (filename1, filename2, filename1, filename2, filename1))
+        if reads_file2 is not None:
+            run_shell("bwa bwasw reference.fasta %s %s > %s.sai" % (reads_file1, reads_file2, reads_file1))
+            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (reads_file1, reads_file2, reads_file1, reads_file2, reads_file1))
         else:
-            run_shell("bwa bwasw reference.fasta %s > %s.sai" % (filename1, filename1))
-            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (filename1, filename1))
+            run_shell("bwa bwasw reference.fasta %s > %s.sai" % (reads_file1, reads_file1))
+            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (reads_file1, reads_file1))
     else:
-        run_shell("bwa aln reference.fasta %s > %s.sai" % (filename1, filename1))
-        if filename2 is not None:
-            run_shell("bwa aln reference.fasta %s > %s.sai" % (filename2, filename2))
-            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (filename1, filename2, filename1, filename2, filename1))
+        run_shell("bwa aln reference.fasta %s > %s.sai" % (reads_file1, reads_file1))
+        if reads_file2 is not None:
+            run_shell("bwa aln reference.fasta %s > %s.sai" % (reads_file2, reads_file2))
+            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (reads_file1, reads_file2, reads_file1, reads_file2, reads_file1))
         else:
-            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (filename1, filename1))
+            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (reads_file1, reads_file1))
 
 def map():
     print "Map:", job["input"]
+    sys.exit(1)
     reads_inputs = job['input']['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
@@ -182,32 +182,36 @@ def map():
         subchunk_id += 1
         if 'quality' in reads_columns[reads_id]:
             if reads_are_paired:
-                filename1 = "input"+str(subchunk_id)+"_1.fastq"
-                filename2 = "input"+str(subchunk_id)+"_2.fastq"
-                write_reads_to_fastq(reads_id, filename1, seq_col='sequence', qual_col='quality')
-                write_reads_to_fastq(reads_id, filename2, seq_col='sequence2', qual_col='quality2')
-                run_alignment(bwa_algorithm, filename1, filename2)
+                reads_file1 = "input"+str(subchunk_id)+"_1.fastq"
+                reads_file2 = "input"+str(subchunk_id)+"_2.fastq"
+                write_reads_to_fastq(reads_id, reads_file1, seq_col='sequence', qual_col='quality')
+                write_reads_to_fastq(reads_id, reads_file2, seq_col='sequence2', qual_col='quality2')
+                run_alignment(bwa_algorithm, reads_file1, reads_file2)
             else:
-                filename1 = "input"+str(subchunk_id)+".fastq"
-                write_reads_to_fastq(reads_id, filename1)
-                run_alignment(bwa_algorithm, filename1)
+                reads_file1 = "input"+str(subchunk_id)+".fastq"
+                write_reads_to_fastq(reads_id, reads_file1)
+                run_alignment(bwa_algorithm, reads_file1)
         else:
             if reads_are_paired:
-                filename1 = "input"+str(subchunk_id)+"_1.fasta"
-                filename2 = "input"+str(subchunk_id)+"_2.fasta"
-                write_reads_to_fasta(reads_id, filename1, seq_col='sequence')
-                write_reads_to_fasta(reads_id, filename2, seq_col='sequence2')
-                run_alignment(bwa_algorithm, filename1, filename2)
+                reads_file1 = "input"+str(subchunk_id)+"_1.fasta"
+                reads_file2 = "input"+str(subchunk_id)+"_2.fasta"
+                write_reads_to_fasta(reads_id, reads_file1, seq_col='sequence')
+                write_reads_to_fasta(reads_id, reads_file2, seq_col='sequence2')
+                run_alignment(bwa_algorithm, reads_file1, reads_file2)
             else:
-                filename1 = "input"+str(subchunk_id)+".fasta"
-                write_reads_to_fasta(reads_id, filename1)
-                run_alignment(bwa_algorithm, filename1)
+                reads_file1 = "input"+str(subchunk_id)+".fasta"
+                write_reads_to_fasta(reads_id, reads_file1)
+                run_alignment(bwa_algorithm, reads_file1)
     
         cmd = "dx_storeSamAsMappingsTable_bwa"
-        cmd += " --alignments '%s.sam'" % filename1
+        cmd += " --alignments '%s.sam'" % reads_file1
         cmd += " --table_id '%s'" % job["input"]["table_id"]
         cmd += " --reads_id '%s'" % reads_id
         cmd += " --start_row '%d'" % 0
+        
+        cmd += " --min_table_part_id '%s'" % min_table_part_id
+        cmd += " --max_table_part_id '%s'" % max_table_part_id
+        
         if False:
             cmd += " --end_row '%d'" % 0
         
