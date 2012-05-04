@@ -32,7 +32,7 @@ def main():
     reads_inputs = job['input']['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
-    reads_columns = {r: desc['columns'] for r, desc in reads_descriptions.items()}
+    reads_columns = {r: [col['name'] for col in desc['columns']] for r, desc in reads_descriptions.items()}
     
     all_reads_have_FlowReads_tag = all(['FlowReads' in desc['types'] for desc in reads_descriptions.values()])
     all_reads_have_LetterReads_tag = all(['LetterReads' in desc['types'] for desc in reads_descriptions.values()])
@@ -123,24 +123,96 @@ def main():
 
     print "MAIN OUTPUT:", job['output']
 
+def write_reads_to_fastq(reads_id, filename, seq_col='sequence', qual_col='quality', start_row=0, end_row=None):
+    row_id = start_row
+    with open(filename, "w") as fh:
+        for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col, qual_col], start=start_row, end=end_row):
+            fh.write("\n".join(['>'+str(row_id), row[0], "+", row[1], ""]))
+            row_id += 1
+
+def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, end_row=None):
+    row_id = start_row
+    with open(filename, "w") as fh:
+        for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col], start=start_row, end=end_row):
+            fh.write("\n".join(['>'+str(row_id), row[0], ""]))
+            row_id += 1
+
+def run_shell(command):
+    logging.debug("Running "+command)
+    subprocess.check_call(command, shell=True)
+
+def run_alignment(algorithm, filename1, filename2=None):
+    if algorithm == "bwasw":
+        if filename2 is not None:
+            run_shell("bwa bwasw reference.fasta %s %s > %s.sai" % (filename1, filename2, filename1))
+            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (filename1, filename2, filename1, filename2, filename1))
+        else:
+            run_shell("bwa bwasw reference.fasta %s > %s.sai" % (filename1, filename1))
+            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (filename1, filename1))
+    else:
+        run_shell("bwa aln reference.fasta %s > %s.sai" % (filename1, filename1))
+        if filename2 is not None:
+            run_shell("bwa aln reference.fasta %s > %s.sai" % (filename2, filename2))
+            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s > %s.sam" % (filename1, filename2, filename1, filename2, filename1))
+        else:
+            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (filename1, filename1))
+
 def map():
+    print "Map:", job["input"]
+    reads_inputs = job['input']['reads']
+    reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
+    reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
+    reads_columns = {r: [col['name'] for col in desc['columns']] for r, desc in reads_descriptions.items()}
+
+    reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
+
     dxpy.download_dxfile(job["input"]["indexed_reference"], "reference.tar.xz")
 
-    # TODO: Start this async...
+    # TODO: Async everything below
     subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
 
-    # Start async multiprocessing pool mappings->fastq fetch here
-    # Wait on async unpack here
-
     if job["input"]["algorithm"] == "bwasw":
-        pass
-        #subprocess.check_call("bwa bwasw ...", shell=True)
+        bwa_algorithm = "bwasw"
     else:
         # algorithm = aln or auto. TODO: check what auto should do
-        pass
-        #subprocess.check_call("bwa aln ...", shell=True)
+        bwa_algorithm = "aln"
+    
+    subchunk_id = 0
+    for reads_id in reads_ids:
+        subchunk_id += 1
+        if 'quality' in reads_columns[reads_id]:
+            if reads_are_paired:
+                filename1 = "input"+str(subchunk_id)+"_1.fastq"
+                filename2 = "input"+str(subchunk_id)+"_2.fastq"
+                write_reads_to_fastq(reads_id, filename1, seq_col='sequence', qual_col='quality')
+                write_reads_to_fastq(reads_id, filename2, seq_col='sequence2', qual_col='quality2')
+                run_alignment(bwa_algorithm, filename1, filename2)
+            else:
+                filename1 = "input"+str(subchunk_id)+".fastq"
+                write_reads_to_fastq(reads_id, filename1)
+                run_alignment(bwa_algorithm, filename1)
+        else:
+            if reads_are_paired:
+                filename1 = "input"+str(subchunk_id)+"_1.fasta"
+                filename2 = "input"+str(subchunk_id)+"_2.fasta"
+                write_reads_to_fasta(reads_id, filename1, seq_col='sequence')
+                write_reads_to_fasta(reads_id, filename2, seq_col='sequence2')
+                run_alignment(bwa_algorithm, filename1, filename2)
+            else:
+                filename1 = "input"+str(subchunk_id)+".fasta"
+                write_reads_to_fasta(reads_id, filename1)
+                run_alignment(bwa_algorithm, filename1)
+    
+        cmd = "dx_storeSamAsMappingsTable_bwa"
+        cmd += " --alignments '%s.sam'" % filename1
+        cmd += " --table_id '%s'" % job["input"]["table_id"]
+        cmd += " --reads_id '%s'" % reads_id
+        cmd += " --start_row '%d'" % 0
+        if False:
+            cmd += " --end_row '%d'" % 0
+        
+        logging.debug("Would run "+cmd)
 
-    print "Map:", job["input"]
     job["output"]["ok"] = True
 
 def postprocess():
