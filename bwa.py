@@ -62,7 +62,7 @@ def main():
                           ("cigar", "string"),
                           ("template_id", "int64")])
     if reads_are_paired:
-        table_columns.extend([("mate_id", "string"),
+        table_columns.extend([("mate_id", "int32"), # TODO: int8
                               ("status2", "string"),
                               ("chr2", "string"),
                               ("lo2", "int32"),
@@ -83,15 +83,16 @@ def main():
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     t.add_types(["LetterMappings", "Mappings"])
 
-    row_offsets = {}; row_cursor = 0
-    for reads_id, description in reads_descriptions.items():
-        row_offsets[reads_id] = row_cursor
-        row_cursor += description["size"]
-
+    row_offsets = []; row_cursor = 0
+    for i in range(len(reads_ids)):
+        row_offsets.append(row_cursor)
+        row_cursor += reads_descriptions[reads_ids[i]]["size"]
+    
     chunk_size = 25000000
     chunk_size = 30000
 
     map_job_inputs = job["input"].copy()
+    map_job_inputs["row_offsets"] = row_offsets
     map_job_inputs["num_rows"] = chunk_size
     map_job_inputs["table_id"] = t.get_id()
     map_job_inputs["indexed_reference"] = job['output']['indexed_reference']
@@ -158,7 +159,6 @@ def run_alignment(algorithm, reads_file1, reads_file2=None):
 
 def map():
     print "Map:", job["input"]
-    sys.exit(1)
     reads_inputs = job['input']['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
@@ -177,30 +177,43 @@ def map():
         # algorithm = aln or auto. TODO: check what auto should do
         bwa_algorithm = "aln"
     
-    subchunk_id = 0
-    for reads_id in reads_ids:
-        subchunk_id += 1
+    row_offsets = job['input']['row_offsets']
+    start_row = job['input']['start_row']
+    num_rows = job['input']['num_rows']
+    jobs = []
+    for i in range(len(reads_ids)):
+        reads_length = reads_descriptions[reads_ids[i]]["size"]
+        if start_row >= row_offsets[i] and start_row < row_offsets[i] + reads_length:
+            rel_start = start_row - row_offsets[i]
+            rel_end = min(reads_length, start_row - row_offsets[i] + num_rows)
+            jobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end, 'index': i})
+    
+    print 'JOBS:', jobs
+    
+    for job in jobs:
+        reads_id = job['reads_id']
+        subchunk_id = job['index']
         if 'quality' in reads_columns[reads_id]:
             if reads_are_paired:
                 reads_file1 = "input"+str(subchunk_id)+"_1.fastq"
                 reads_file2 = "input"+str(subchunk_id)+"_2.fastq"
-                write_reads_to_fastq(reads_id, reads_file1, seq_col='sequence', qual_col='quality')
-                write_reads_to_fastq(reads_id, reads_file2, seq_col='sequence2', qual_col='quality2')
+                write_reads_to_fastq(reads_id, reads_file1, seq_col='sequence', qual_col='quality', start_row=job['start_row'], end_row=job['end_row'])
+                write_reads_to_fastq(reads_id, reads_file2, seq_col='sequence2', qual_col='quality2', start_row=job['start_row'], end_row=job['end_row'])
                 run_alignment(bwa_algorithm, reads_file1, reads_file2)
             else:
                 reads_file1 = "input"+str(subchunk_id)+".fastq"
-                write_reads_to_fastq(reads_id, reads_file1)
+                write_reads_to_fastq(reads_id, reads_file1, start_row=job['start_row'], end_row=job['end_row'])
                 run_alignment(bwa_algorithm, reads_file1)
         else:
             if reads_are_paired:
                 reads_file1 = "input"+str(subchunk_id)+"_1.fasta"
                 reads_file2 = "input"+str(subchunk_id)+"_2.fasta"
-                write_reads_to_fasta(reads_id, reads_file1, seq_col='sequence')
-                write_reads_to_fasta(reads_id, reads_file2, seq_col='sequence2')
+                write_reads_to_fasta(reads_id, reads_file1, seq_col='sequence', start_row=job['start_row'], end_row=job['end_row'])
+                write_reads_to_fasta(reads_id, reads_file2, seq_col='sequence2', start_row=job['start_row'], end_row=job['end_row'])
                 run_alignment(bwa_algorithm, reads_file1, reads_file2)
             else:
                 reads_file1 = "input"+str(subchunk_id)+".fasta"
-                write_reads_to_fasta(reads_id, reads_file1)
+                write_reads_to_fasta(reads_id, reads_file1, start_row=job['start_row'], end_row=job['end_row'])
                 run_alignment(bwa_algorithm, reads_file1)
     
         cmd = "dx_storeSamAsMappingsTable_bwa"
