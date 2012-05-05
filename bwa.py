@@ -88,7 +88,8 @@ def main():
         row_cursor += reads_descriptions[reads_ids[i]]["size"]
     
     chunk_size = 25000000
-    chunk_size = 30000
+    if "chunk_size" in job["input"]:
+        chunk_size = job["input"]["chunk_size"]
 
     map_job_inputs = job["input"].copy()
     map_job_inputs["row_offsets"] = row_offsets
