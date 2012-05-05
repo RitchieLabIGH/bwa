@@ -108,16 +108,6 @@ def main():
 
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
-    # Scan through reads, computing start row offset
-    # Save start row offsets in a record
-    # Spawn map jobs, parameters: passthrough all params plus start_row, num_rows
-
-    # In map job:
-    # Convert with dx_tableToFastq or dx_tableToFasta depending on quality column presence
-    #   - Rewrite to support trimming of FlowReads
-    # Map with params; use the apparent number of cpus in bwa aln
-    # 
-
     # (TODO: how do JBORs interact with array outputs?)
     job['output']['mappings'] = {'job': postprocess_job.get_id(), 'field': 'mappings'}
 
@@ -189,6 +179,7 @@ def map():
     for subjob in subjobs:
         reads_id = subjob['reads_id']
         subchunk_id = subjob['index']
+        # TODO: FlowReads trimming support
         if 'quality' in reads_columns[reads_id]:
             if reads_are_paired:
                 reads_file1 = "input"+str(subchunk_id)+"_1.fastq"
