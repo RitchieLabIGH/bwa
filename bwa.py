@@ -1,6 +1,7 @@
 import dxpy
 import subprocess, logging, os
 from math import floor, ceil
+from multiprocessing import Pool, cpu_count
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -24,7 +25,7 @@ def make_indexed_reference():
     indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
     indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
     indexed_ref_dxfile.set_details({'originalContigSet': job['input']['reference']})
-    indexed_ref_dxfile.close()
+    indexed_ref_dxfile.close(block=True)
     return indexed_ref_dxfile
 
 def main():
@@ -146,14 +147,14 @@ def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_o
 def parse_bwa_cmd_opts(input):
     aln_opts, sampe_opts, sw_opts = '', '', ''
     for opt in ['n', 'o', 'e', 'i', 'd', 'l', 'k', 'm', 'M', 'O', 'E', 'R', 'q']:
-        if opt in input:
-            aln_opts += " -"+opt+" "+str(input['opt'])
+        if 'aln_'+opt in input:
+            aln_opts += " -"+opt+" "+str(input['aln_'+opt])
     for opt in ['a', 'o', 'n', 'N', 'c']:
-        if opt in input:
-            sampe_opts += " -"+opt+" "+str(input['opt'])
+        if 'sampe_'+opt in input:
+            sampe_opts += " -"+opt+" "+str(input['sampe_'+opt])
     for opt in ['a', 'b', 'q', 'r', 'w', 'm', 'T', 'c', 'z', 's', 'N']:
-        if opt in input:
-            sw_opts += " -"+opt+" "+str(input['opt'])
+        if 'sw_'+opt in input:
+            sw_opts += " -"+opt+" "+str(input['sw_'+opt])
     return aln_opts, sampe_opts, sw_opts
 
 def map():
@@ -175,7 +176,12 @@ def map():
     else:
         # algorithm = aln or auto. TODO: check what auto should do
         bwa_algorithm = "aln"
+    
     aln_opts, sampe_opts, sw_opts = parse_bwa_cmd_opts(job['input'])
+    
+    # Set the number of threads BWA parameter to the apparent number of CPUs.
+    aln_opts += " -t " + str(cpu_count())
+    sw_opts += " -t " + str(cpu_count())
     
     row_offsets = job['input']['row_offsets']
     start_row = job['input']['start_row']
@@ -228,7 +234,6 @@ def map():
         max_table_part_id = min_table_part_id + 999
         cmd += " --start_part '%s'" % min_table_part_id
         cmd += " --end_part '%s'" % max_table_part_id
-        
         
         run_shell(cmd)
 
