@@ -101,11 +101,20 @@ def main():
     postprocess_job_inputs = job["input"].copy()
     postprocess_job_inputs["table_id"] = t.get_id()
     
+    # Partition gtable part id range between jobs
+    max_gtable_parts = 250000; gtable_parts_cursor = 1
+    num_jobs = max(1, 1 + row_cursor/chunk_size)
+    gtable_parts_chunk_size = max_gtable_parts/num_jobs
+    map_job_inputs["gtable_parts_chunk_size"] = gtable_parts_chunk_size
+    
     for start_row in xrange(0, row_cursor, chunk_size):
         map_job_inputs["start_row"] = start_row
+        map_job_inputs["min_gtable_part_id"] = gtable_parts_cursor
         map_job = dxpy.new_dxjob(map_job_inputs, "map")
         print "Launched map job with", map_job_inputs
         postprocess_job_inputs["chunk%dresult" % row_cursor] = {'job': map_job.get_id(), 'field': 'ok'}
+        
+        gtable_parts_cursor += gtable_parts_chunk_size
 
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
@@ -131,18 +140,18 @@ def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, en
 def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
     if algorithm == "bwasw":
         if reads_file2 is not None:
-            run_shell("bwa bwasw reference.fasta %s %s %s > %s.sai" % (reads_file1, reads_file2, sw_opts, reads_file1))
-            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s %s > %s.sam" % (reads_file1, reads_file2, reads_file1, reads_file2, sampe_opts, reads_file1))
+            run_shell("bwa bwasw reference.fasta {r1} {r2} {opts} > {r1}.sai".format(r1=reads_file1, r2=reads_file2, opts=sw_opts))
+            run_shell("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam".format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
         else:
-            run_shell("bwa bwasw reference.fasta %s %s > %s.sai" % (reads_file1, sw_opts, reads_file1))
-            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (reads_file1, reads_file1))
-    else:
-        run_shell("bwa aln reference.fasta %s %s > %s.sai" % (reads_file1, aln_opts, reads_file1))
+            run_shell("bwa bwasw reference.fasta {r1} {opts} > {r1}.sai".format(r1=reads_file1, opts=sw_opts))
+            run_shell("bwa samse reference.fasta {r1}.sai > {r1}.sam".format(r1=reads_file1))
+    else: # algorithm is "aln"
+        run_shell("bwa aln reference.fasta {r1} {opts} > {r1}.sai".format(r1=reads_file1, opts=aln_opts))
         if reads_file2 is not None:
-            run_shell("bwa aln reference.fasta %s %s > %s.sai" % (reads_file2, aln_opts, reads_file2))
-            run_shell("bwa sampe reference.fasta %s.sai %s.sai %s %s %s > %s.sam" % (reads_file1, reads_file2, reads_file1, reads_file2, sampe_opts, reads_file1))
+            run_shell("bwa aln reference.fasta {r2} {opts} > {r2}.sai".format(r2=reads_file2, opts=aln_opts))
+            run_shell("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam".format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
         else:
-            run_shell("bwa samse reference.fasta %s.sai %s > %s.sam" % (reads_file1, reads_file1))
+            run_shell("bwa samse reference.fasta {r1}.sai > {r1}.sam".format(r1=reads_file1))
 
 def parse_bwa_cmd_opts(input):
     aln_opts, sampe_opts, sw_opts = '', '', ''
@@ -230,10 +239,15 @@ def map():
         cmd += " --start_row %d" % subjob['start_row']
         #cmd += " --end_row %d" % subjob['end_row']
         
-        min_table_part_id = 1 + (subchunk_id * 1000)
-        max_table_part_id = min_table_part_id + 999
-        cmd += " --start_part '%s'" % min_table_part_id
-        cmd += " --end_part '%s'" % max_table_part_id
+        min_gtable_part_id = job['input']['min_gtable_part_id']
+        gtable_parts_chunk_size = job['input']['gtable_parts_chunk_size']
+        subjob_min_gtable_part_id = min_gtable_part_id + subjob['index']*(gtable_parts_chunk_size/len(subjobs))
+        subjob_max_gtable_part_id = subjob_min_gtable_part_id + gtable_parts_chunk_size/len(subjobs) - 1
+        
+#        min_table_part_id = 1 + (subchunk_id * 1000)
+#        max_table_part_id = min_table_part_id + 999
+        cmd += " --start_part '%s'" % subjob_min_gtable_part_id
+        cmd += " --end_part '%s'" % subjob_max_gtable_part_id
         
         run_shell(cmd)
 
