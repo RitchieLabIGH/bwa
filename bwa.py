@@ -49,7 +49,7 @@ def main():
     
     table_columns = [("sequence", "string")]
     if reads_have_names:
-        table_columns.append(("names", "string"))
+        table_columns.append(("name", "string"))
     if reads_have_qualities:
         table_columns.append(("quality", "string"))
     table_columns.extend([("status", "string"),
