@@ -81,7 +81,7 @@ def main():
     
     gri_index = dxpy.DXGTable.genomic_range_index("chr", "lo", "hi")
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
-    t.set_details({"original_contiget":job['input']['reference']})
+    t.set_details({'originalContigSet': job['input']['reference']})
     t.add_types(["LetterMappings", "Mappings"])
 
     row_offsets = []; row_cursor = 0
@@ -141,18 +141,26 @@ def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, en
 def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
     if algorithm == "bwasw":
         if reads_file2 is not None:
-            run_shell("bwa bwasw reference.fasta {r1} {r2} {opts} > {r1}.sai".format(r1=reads_file1, r2=reads_file2, opts=sw_opts))
-            run_shell("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam".format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
+            command = "bwa bwasw reference.fasta {r1} {r2} {opts} > {r1}.sai"
+            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sw_opts))
+            command = "bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam"
+            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
         else:
-            run_shell("bwa bwasw reference.fasta {r1} {opts} > {r1}.sai".format(r1=reads_file1, opts=sw_opts))
-            run_shell("bwa samse reference.fasta {r1}.sai > {r1}.sam".format(r1=reads_file1))
+            command = "bwa bwasw reference.fasta {r1} {opts} > {r1}.sai"
+            run_shell(command.format(r1=reads_file1, opts=sw_opts))
+            command = "bwa samse reference.fasta {r1}.sai > {r1}.sam"
+            run_shell(command.format(r1=reads_file1))
     else: # algorithm is "aln"
-        run_shell("bwa aln reference.fasta {r1} {opts} > {r1}.sai".format(r1=reads_file1, opts=aln_opts))
+        command = "bwa aln reference.fasta {r1} {opts} > {r1}.sai"
+        run_shell(command.format(r1=reads_file1, opts=aln_opts))
         if reads_file2 is not None:
-            run_shell("bwa aln reference.fasta {r2} {opts} > {r2}.sai".format(r2=reads_file2, opts=aln_opts))
-            run_shell("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam".format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
+            command = "bwa aln reference.fasta {r2} {opts} > {r2}.sai"
+            run_shell(command.format(r2=reads_file2, opts=aln_opts))
+            command = "bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam"
+            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
         else:
-            run_shell("bwa samse reference.fasta {r1}.sai > {r1}.sam".format(r1=reads_file1))
+            command = "bwa samse reference.fasta {r1}.sai > {r1}.sam"
+            run_shell(command.format(r1=reads_file1))
 
 def parse_bwa_cmd_opts(input):
     aln_opts, sampe_opts, sw_opts = '', '', ''
