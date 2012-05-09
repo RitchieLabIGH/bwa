@@ -1,6 +1,5 @@
 import dxpy
 import subprocess, logging, os
-from math import floor, ceil
 from multiprocessing import Pool, cpu_count
 
 logging.basicConfig(level=logging.DEBUG)
@@ -81,7 +80,13 @@ def main():
     
     gri_index = dxpy.DXGTable.genomic_range_index("chr", "lo", "hi")
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
-    t.set_details({'originalContigSet': job['input']['reference']})
+    
+    if 'indexed_reference' in job['input']:
+        original_contig_set = dxpy.DXFile(job['input']['indexed_reference']).get_details()['originalContigSet']
+    else:
+        original_contig_set = job['input']['reference']
+    t.set_details({'originalContigSet': original_contig_set})
+
     t.add_types(["LetterMappings", "Mappings"])
 
     row_offsets = []; row_cursor = 0
@@ -210,13 +215,13 @@ def map():
         if start_row >= row_offsets[i] and start_row < row_offsets[i] + reads_length:
             rel_start = start_row - row_offsets[i]
             rel_end = min(reads_length, start_row - row_offsets[i] + num_rows)
-            subjobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end, 'index': i})
+            subjobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end})
     
     print 'SUBJOBS:', subjobs
     
-    for subjob in subjobs:
+    for subchunk_id in range(len(subjobs)):
+        subjob = subjobs[subchunk_id]
         reads_id = subjob['reads_id']
-        subchunk_id = subjob['index']
         # TODO: FlowReads trimming support
         if 'quality' in reads_columns[reads_id]:
             if reads_are_paired:
@@ -250,7 +255,7 @@ def map():
         
         min_gtable_part_id = job['input']['min_gtable_part_id']
         gtable_parts_chunk_size = job['input']['gtable_parts_chunk_size']
-        subjob_min_gtable_part_id = min_gtable_part_id + subjob['index']*(gtable_parts_chunk_size/len(subjobs))
+        subjob_min_gtable_part_id = min_gtable_part_id + subchunk_id*(gtable_parts_chunk_size/len(subjobs))
         subjob_max_gtable_part_id = subjob_min_gtable_part_id + gtable_parts_chunk_size/len(subjobs) - 1
         
 #        min_table_part_id = 1 + (subchunk_id * 1000)
