@@ -81,6 +81,7 @@ def main():
     
     gri_index = dxpy.DXGTable.genomic_range_index("chr", "lo", "hi")
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
+    t.set_details({"original_contiget":job['input']['reference']})
     t.add_types(["LetterMappings", "Mappings"])
 
     row_offsets = []; row_cursor = 0
