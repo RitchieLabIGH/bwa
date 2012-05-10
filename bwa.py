@@ -118,7 +118,7 @@ def main():
         map_job_inputs["min_gtable_part_id"] = gtable_parts_cursor
         map_job = dxpy.new_dxjob(map_job_inputs, "map")
         print "Launched map job with", map_job_inputs
-        postprocess_job_inputs["chunk%dresult" % row_cursor] = {'job': map_job.get_id(), 'field': 'ok'}
+        postprocess_job_inputs["chunk%dresult" % start_row] = {'job': map_job.get_id(), 'field': 'ok'}
         
         gtable_parts_cursor += gtable_parts_chunk_size
 
