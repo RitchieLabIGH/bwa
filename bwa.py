@@ -1,5 +1,5 @@
 import dxpy
-import subprocess, logging, os
+import subprocess, logging, os, time, re
 from multiprocessing import Pool, cpu_count
 
 logging.basicConfig(level=logging.DEBUG)
@@ -119,6 +119,7 @@ def main():
         map_job = dxpy.new_dxjob(map_job_inputs, "map")
         print "Launched map job with", map_job_inputs
         postprocess_job_inputs["chunk%dresult" % start_row] = {'job': map_job.get_id(), 'field': 'ok'}
+        postprocess_job_inputs["chunk%ddebug" % start_row] = {'job': map_job.get_id(), 'field': 'debug'}
         
         gtable_parts_cursor += gtable_parts_chunk_size
 
@@ -169,19 +170,20 @@ def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_o
 
 def parse_bwa_cmd_opts(input):
     aln_opts, sampe_opts, sw_opts = '', '', ''
-    for opt in ['n', 'o', 'e', 'i', 'd', 'l', 'k', 'm', 'M', 'O', 'E', 'R', 'q']:
+    for opt in 'n', 'o', 'e', 'i', 'd', 'l', 'k', 'm', 'M', 'O', 'E', 'R', 'q':
         if 'aln_'+opt in input:
             aln_opts += " -"+opt+" "+str(input['aln_'+opt])
-    for opt in ['a', 'o', 'n', 'N', 'c']:
+    for opt in 'a', 'o', 'n', 'N', 'c':
         if 'sampe_'+opt in input:
             sampe_opts += " -"+opt+" "+str(input['sampe_'+opt])
-    for opt in ['a', 'b', 'q', 'r', 'w', 'm', 'T', 'c', 'z', 's', 'N']:
+    for opt in 'a', 'b', 'q', 'r', 'w', 'm', 'T', 'c', 'z', 's', 'N':
         if 'sw_'+opt in input:
             sw_opts += " -"+opt+" "+str(input['sw_'+opt])
     return aln_opts, sampe_opts, sw_opts
 
 def map():
     print "Map:", job["input"]
+    times = [('start', time.time())]
     reads_inputs = job['input']['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
@@ -189,7 +191,9 @@ def map():
 
     reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
 
+    times.append(('preamble', time.time()))
     dxpy.download_dxfile(job["input"]["indexed_reference"], "reference.tar.xz")
+    times.append(('download reference', time.time()))
 
     # TODO: Async everything below
     subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
@@ -214,9 +218,10 @@ def map():
         reads_length = reads_descriptions[reads_ids[i]]["size"]
         if start_row >= row_offsets[i] and start_row < row_offsets[i] + reads_length:
             rel_start = start_row - row_offsets[i]
-            rel_end = min(reads_length, start_row - row_offsets[i] + num_rows)
+            rel_end = min(reads_length, start_row - row_offsets[i] + num_rows) # Using half-open intervals: [start, end)
             subjobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end})
     
+    times.append(('parse parameters', time.time()))
     print 'SUBJOBS:', subjobs
     
     for subchunk_id in range(len(subjobs)):
@@ -245,7 +250,9 @@ def map():
                 reads_file1 = "input"+str(subchunk_id)+".fasta"
                 write_reads_to_fasta(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
                 run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
-    
+        
+        times.append(('run alignment (subchunk %d)' % subchunk_id, time.time()))
+        
         cmd = "dx_storeSamAsMappingsTable_bwa"
         cmd += " --alignments '%s.sam'" % reads_file1
         cmd += " --table_id '%s'" % job["input"]["table_id"]
@@ -262,13 +269,26 @@ def map():
 #        max_table_part_id = min_table_part_id + 999
         cmd += " --start_part '%s'" % subjob_min_gtable_part_id
         cmd += " --end_part '%s'" % subjob_max_gtable_part_id
-        
+        if job['input'].get('discard_unmapped_rows'):
+            cmd += " --discard_unmapped_rows"
         run_shell(cmd)
+        times.append(('run table upload (subchunk %d)' % subchunk_id, time.time()))
 
     job["output"]["ok"] = True
+    
+    timing_report = {}
+    for i in range(len(times)-1):
+        timing_report[times[i+1][0]] = times[i+1][1] - times[i][1]
+    job["output"]["debug"] = {'times': timing_report}
 
 def postprocess():
     print "Postprocess:", job["input"]
+    
+    time_report = {k: v for k, v in job["input"].iteritems() if re.match("chunk\d+debug", k)}
+    
     t = dxpy.DXGTable(job["input"]["table_id"])
+    d = t.get_details()
+    d['time_report'] = time_report
+    t.set_details(d)
     t.close(block=True)
     job['output']['mappings'] = [dxpy.dxlink(t)]
