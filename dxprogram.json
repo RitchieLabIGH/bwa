@@ -40,7 +40,8 @@
     {"name": "sw_z", "class": "int", "optional": true},
     {"name": "sw_s", "class": "int", "optional": true},
     {"name": "sw_N", "class": "int", "optional": true},
-    {"name": "chunk_size", "class": "int", "optional": true}
+    {"name": "chunk_size", "class": "int", "optional": true},
+    {"name": "discard_unmapped_rows", "class": "boolean", "default": false}
   ],
   "outputs": [
     {"name": "mappings", "class": "array:gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
