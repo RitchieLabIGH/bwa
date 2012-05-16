@@ -2,7 +2,7 @@ import dxpy
 import subprocess, logging, os, time, re
 from multiprocessing import Pool, cpu_count
 
-logging.basicConfig(level=logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
 
 def run_shell(command):
     logging.debug("Running "+command)
