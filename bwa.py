@@ -82,12 +82,12 @@ def main():
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     
     if 'indexed_reference' in job['input']:
-        original_contig_set = dxpy.DXFile(job['input']['indexed_reference']).get_details()['original_contigset']
+        original_contigset = dxpy.DXFile(job['input']['indexed_reference']).get_details()['original_contigset']
     else:
-        original_contig_set = job['input']['reference']
-    t.set_details({'originalContigSet': original_contig_set})
+        original_contigset = job['input']['reference']
+    t.set_details({'original_contigset': original_contigset})
 
-    t.add_types(["LetterMappings", "Mappings"])
+    t.add_types(["LetterMappings", "Mappings", "gri"])
 
     row_offsets = []; row_cursor = 0
     for i in range(len(reads_ids)):
