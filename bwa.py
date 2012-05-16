@@ -23,7 +23,7 @@ def make_indexed_reference():
     subprocess.check_call("tar -cJf reference.tar.xz reference.fasta*", shell=True)
     indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
     indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
-    indexed_ref_dxfile.set_details({'originalContigSet': job['input']['reference']})
+    indexed_ref_dxfile.set_details({'original_contigset': job['input']['reference']})
     indexed_ref_dxfile.close(block=True)
     return indexed_ref_dxfile
 
@@ -82,7 +82,7 @@ def main():
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     
     if 'indexed_reference' in job['input']:
-        original_contig_set = dxpy.DXFile(job['input']['indexed_reference']).get_details()['originalContigSet']
+        original_contig_set = dxpy.DXFile(job['input']['indexed_reference']).get_details()['original_contigset']
     else:
         original_contig_set = job['input']['reference']
     t.set_details({'originalContigSet': original_contig_set})
@@ -108,20 +108,15 @@ def main():
     postprocess_job_inputs["table_id"] = t.get_id()
     
     # Partition gtable part id range between jobs
-    max_gtable_parts = 250000; gtable_parts_cursor = 1
     num_jobs = max(1, 1 + row_cursor/chunk_size)
-    gtable_parts_chunk_size = max_gtable_parts/num_jobs
-    map_job_inputs["gtable_parts_chunk_size"] = gtable_parts_chunk_size
     
     for start_row in xrange(0, row_cursor, chunk_size):
         map_job_inputs["start_row"] = start_row
-        map_job_inputs["min_gtable_part_id"] = gtable_parts_cursor
         map_job = dxpy.new_dxjob(map_job_inputs, "map")
         print "Launched map job with", map_job_inputs
         postprocess_job_inputs["chunk%dresult" % start_row] = {'job': map_job.get_id(), 'field': 'ok'}
         postprocess_job_inputs["chunk%ddebug" % start_row] = {'job': map_job.get_id(), 'field': 'debug'}
         
-        gtable_parts_cursor += gtable_parts_chunk_size
 
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
@@ -258,17 +253,7 @@ def map():
         cmd += " --table_id '%s'" % job["input"]["table_id"]
         cmd += " --reads_id '%s'" % reads_id
         cmd += " --start_row %d" % subjob['start_row']
-        #cmd += " --end_row %d" % subjob['end_row']
         
-        min_gtable_part_id = job['input']['min_gtable_part_id']
-        gtable_parts_chunk_size = job['input']['gtable_parts_chunk_size']
-        subjob_min_gtable_part_id = min_gtable_part_id + subchunk_id*(gtable_parts_chunk_size/len(subjobs))
-        subjob_max_gtable_part_id = subjob_min_gtable_part_id + gtable_parts_chunk_size/len(subjobs) - 1
-        
-#        min_table_part_id = 1 + (subchunk_id * 1000)
-#        max_table_part_id = min_table_part_id + 999
-        cmd += " --start_part '%s'" % subjob_min_gtable_part_id
-        cmd += " --end_part '%s'" % subjob_max_gtable_part_id
         if job['input'].get('discard_unmapped_rows'):
             cmd += " --discard_unmapped_rows"
         run_shell(cmd)
