@@ -44,9 +44,9 @@
     {"name": "discard_unmapped_rows", "class": "boolean", "default": false}
   ],
   "outputs": [
-    {"name": "mappings", "class": "array:gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
+    {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1"}
   ],
-  "run": {"file": "bwa.py", "interpreter": "python2.7"},
+  "run": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "libarchive12"}]},
   "folder": "/bwa"
 }

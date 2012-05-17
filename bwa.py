@@ -229,7 +229,9 @@ def map():
                 reads_file2 = "input"+str(subchunk_id)+"_2.fastq"
                 write_reads_to_fastq(reads_id, reads_file1, seq_col='sequence', qual_col='quality', start_row=subjob['start_row'], end_row=subjob['end_row'])
                 write_reads_to_fastq(reads_id, reads_file2, seq_col='sequence2', qual_col='quality2', start_row=subjob['start_row'], end_row=subjob['end_row'])
+                times.append(('fetch reads (subchunk %d)' % subchunk_id, time.time()))
                 run_alignment(bwa_algorithm, reads_file1, reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
+                times.append(('run alignment (subchunk %d)' % subchunk_id, time.time()))
             else:
                 reads_file1 = "input"+str(subchunk_id)+".fastq"
                 write_reads_to_fastq(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
@@ -245,8 +247,6 @@ def map():
                 reads_file1 = "input"+str(subchunk_id)+".fasta"
                 write_reads_to_fasta(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
                 run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
-        
-        times.append(('run alignment (subchunk %d)' % subchunk_id, time.time()))
         
         cmd = "dx_storeSamAsMappingsTable_bwa"
         cmd += " --alignments '%s.sam'" % reads_file1
@@ -276,4 +276,4 @@ def postprocess():
     d['time_report'] = time_report
     t.set_details(d)
     t.close(block=True)
-    job['output']['mappings'] = [dxpy.dxlink(t)]
+    job['output']['mappings'] = dxpy.dxlink(t)
