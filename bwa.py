@@ -20,7 +20,7 @@ def make_indexed_reference():
     else:
         subprocess.check_call("bwa index -a bwtsw reference.fasta", shell=True)
 
-    subprocess.check_call("tar -cJf reference.tar.xz reference.fasta*", shell=True)
+    subprocess.check_call("XZ_OPT=-1 tar -cJf reference.tar.xz reference.fasta*", shell=True)
     indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
     indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
     indexed_ref_dxfile.set_details({'original_contigset': job['input']['reference']})
@@ -191,7 +191,7 @@ def map():
     times.append(('download reference', time.time()))
 
     # TODO: Async everything below
-    subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
+    subprocess.check_call("pixz -d reference.tar.xz && tar -xf reference.tar", shell=True)
 
     if job["input"]["algorithm"] == "bwasw":
         bwa_algorithm = "bwasw"
