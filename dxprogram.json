@@ -47,6 +47,6 @@
     {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings"]}},
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1"}
   ],
-  "run": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "libarchive-dev"}]},
+  "run": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "libarchive-dev"}, {"name": "liblzma-dev"}]},
   "folder": "/bwa"
 }
