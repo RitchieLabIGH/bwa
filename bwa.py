@@ -191,7 +191,8 @@ def map():
     times.append(('download reference', time.time()))
 
     # TODO: Async everything below
-    subprocess.check_call("pixz -d reference.tar.xz && tar -xf reference.tar", shell=True)
+    # subprocess.check_call("pixz -d reference.tar.xz && tar -xf reference.tar", shell=True)
+    subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
 
     if job["input"]["algorithm"] == "bwasw":
         bwa_algorithm = "bwasw"
