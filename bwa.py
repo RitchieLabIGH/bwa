@@ -28,6 +28,7 @@ def make_indexed_reference():
     return indexed_ref_dxfile
 
 def main():
+    shiznits!
     reads_inputs = job['input']['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
