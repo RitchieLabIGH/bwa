@@ -129,7 +129,7 @@ def write_reads_to_fastq(reads_id, filename, seq_col='sequence', qual_col='quali
     row_id = start_row
     with open(filename, "w") as fh:
         for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col, qual_col], start=start_row, end=end_row):
-            fh.write("\n".join(['>'+str(row_id), row[0], "+", row[1], ""]))
+            fh.write("\n".join(['@'+str(row_id), row[0], "+", row[1], ""]))
             row_id += 1
 
 def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, end_row=None):
@@ -140,28 +140,22 @@ def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, en
             row_id += 1
 
 def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
+    commands = []
     if algorithm == "bwasw":
-        if reads_file2 is not None:
-            command = "bwa bwasw reference.fasta {r1} {r2} {opts} > {r1}.sai"
-            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sw_opts))
-            command = "bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam"
-            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
-        else:
-            command = "bwa bwasw reference.fasta {r1} {opts} > {r1}.sai"
-            run_shell(command.format(r1=reads_file1, opts=sw_opts))
-            command = "bwa samse reference.fasta {r1}.sai > {r1}.sam"
-            run_shell(command.format(r1=reads_file1))
+        if reads_file2 is None:
+            commands.append("bwa bwasw reference.fasta {r1} {sw_opts} > {r1}.sam")
+        else: # Paired read data
+            commands.append("bwa bwasw reference.fasta {r1} {r2} {sw_opts} > {r1}.sam")
     else: # algorithm is "aln"
-        command = "bwa aln reference.fasta {r1} {opts} > {r1}.sai"
-        run_shell(command.format(r1=reads_file1, opts=aln_opts))
+        commands.append("bwa aln reference.fasta {r1} {aln_opts} > {r1}.sai")
         if reads_file2 is not None:
-            command = "bwa aln reference.fasta {r2} {opts} > {r2}.sai"
-            run_shell(command.format(r2=reads_file2, opts=aln_opts))
-            command = "bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {opts} > {r1}.sam"
-            run_shell(command.format(r1=reads_file1, r2=reads_file2, opts=sampe_opts))
+            commands.append("bwa aln reference.fasta {r2} {aln_opts} > {r2}.sai")
+            commands.append("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {sampe_opts} > {r1}.sam")
         else:
-            command = "bwa samse reference.fasta {r1}.sai > {r1}.sam"
-            run_shell(command.format(r1=reads_file1))
+            commands.append("bwa samse reference.fasta {r1}.sai > {r1}.sam")
+
+    for command in commands:        
+        run_shell(command.format(r1=reads_file1, r2=reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts))
 
 def parse_bwa_cmd_opts(input):
     aln_opts, sampe_opts, sw_opts = '', '', ''
