@@ -21,7 +21,6 @@ def main():
     parser.add_option("--reads_id", dest="reads_id", help="reads table used for mappings")
     parser.add_option("--start_row", dest="reads_offset", help="starting row in reads table, used for parallelizing")
     parser.add_option("--discard_unmapped_rows", dest="discard_unmapped", help="Discard unmapped rows", action='store_true', default=False)
-    parser.add_option("--random_fraction", dest="random_fraction", help="Store only a random subset of the mapped reads", default=1.0)
     (opts, args) = parser.parse_args()
     #if len(args) < 8:
         #parser.print_help()
@@ -186,53 +185,45 @@ def main():
 
         
         ###### sort and reconcile hi2 #######
+        if isPaired == True:
+            left_reads = []
+            right_reads = []
 
-        left_reads = []
-        right_reads = []
-
-        for i in range( len( sam_by_read_rows ) ):
-            #if paired:
-            if sam_by_read_rows[i][map_col_lookup['mate_id']] == 0:
-                left_reads.append( sam_by_read_rows[i] )
+            for i in range( len( sam_by_read_rows ) ):
+                #if paired:
+                if sam_by_read_rows[i][map_col_lookup['mate_id']] == 0:
+                    left_reads.append( sam_by_read_rows[i] )
             
-            if sam_by_read_rows[i][map_col_lookup['mate_id']] == 1:
-                right_reads.append( sam_by_read_rows[i] )
+                    if sam_by_read_rows[i][map_col_lookup['mate_id']] == 1:
+                        right_reads.append( sam_by_read_rows[i] )
 
-        #print left_reads
-        #print right_reads
+                # find matching mate
+            for i in range( len( left_reads ) ):
+                for j in range( len ( right_reads ) ):
 
-        # find matching mate
-        for i in range( len( left_reads ) ):
-            for j in range( len ( right_reads ) ):
-
-                # if they're mates (as determined by their template ID and locations (if available) at what they say there mate's location is
+                # if they're mates (as determined by their template ID and locations (if available))
+                # at what they say there mate's location is
                 # then copy over each other's 'hi' value into your mate's 'hi' value, 'hi2'
-                if left_reads[i][map_col_lookup['status']] == right_reads[j][map_col_lookup['status2']] and left_reads[i][map_col_lookup['template_id']] == right_reads[j][map_col_lookup['template_id']]:
-                    left_reads[i][map_col_lookup['hi2']] = right_reads[j][map_col_lookup['hi']]
-                    right_reads[j][map_col_lookup['hi2']] = left_reads[i][map_col_lookup['hi']]
-                    #print "$$$$$$$$$$$$$$$$$$$$$$"
-                    #print left_reads[i]
-                    #print right_reads[j]
+                    if left_reads[i][map_col_lookup['status']] == right_reads[j][map_col_lookup['status2']] and left_reads[i][map_col_lookup['template_id']] == right_reads[j][map_col_lookup['template_id']]:
+                        left_reads[i][map_col_lookup['hi2']] = right_reads[j][map_col_lookup['hi']]
+                        right_reads[j][map_col_lookup['hi2']] = left_reads[i][map_col_lookup['hi']]
         
         #####################################
 
         # if discard_unmapped is set then only output reads that are mapped.  For pairs discard mappings only if both reads are unmapped
         if discard_unmapped == False and len(sam_by_read_rows) > 0:
-            if(random.random() <= opts.random_fraction):
-                mappings_table.add_rows(sam_by_read_rows)
+            mappings_table.add_rows(sam_by_read_rows)
         else:
             toAdd = []
             for i in sam_by_read_rows:
                 #if single reads and not unmapped, then add to table
                 if i[map_col_lookup['status']] != 'UNMAPPED' and isPaired == False :
-                    if(random.random() <= opts.random_fraction):
-                        toAdd.append( i )
+                    toAdd.append( i )
                 
                 #if paired and either of the reads is mapped, then add to table
                 elif isPaired == True:
                     if i[map_col_lookup['status']] != 'UNMAPPED' or i[map_col_lookup['status2']] != 'UNMAPPED':
-                        if(random.random() <= opts.random_fraction):
-                            toAdd.append( i )
+                        toAdd.append( i )
             
 
             if len( toAdd ) > 0:
