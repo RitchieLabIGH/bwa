@@ -129,14 +129,16 @@ def write_reads_to_fastq(reads_id, filename, seq_col='sequence', qual_col='quali
     row_id = start_row
     with open(filename, "w") as fh:
         for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col, qual_col], start=start_row, end=end_row):
-            fh.write("\n".join(['@'+str(row_id), row[0], "+", row[1], ""]))
+            for line in '@%d' % row_id, row[0], "+", row[1]:
+                print >>fh, line
             row_id += 1
 
 def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, end_row=None):
     row_id = start_row
     with open(filename, "w") as fh:
         for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col], start=start_row, end=end_row):
-            fh.write("\n".join(['>'+str(row_id), row[0], ""]))
+            for line in '>%d' % row_id, row[0]:
+                print >>fh, line
             row_id += 1
 
 def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
