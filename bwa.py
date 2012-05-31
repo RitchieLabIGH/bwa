@@ -36,8 +36,10 @@ def main():
     all_reads_have_FlowReads_tag = all(['FlowReads' in desc['types'] for desc in reads_descriptions.values()])
     all_reads_have_LetterReads_tag = all(['LetterReads' in desc['types'] for desc in reads_descriptions.values()])
     reads_have_names = any(['name' in columns for columns in reads_columns.values()])
-    reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
     reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
+    reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
+    if reads_have_qualities:
+        assert(all(['quality' in columns for columns in reads_columns.values()]))
     
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
