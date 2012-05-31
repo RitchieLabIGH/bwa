@@ -152,7 +152,7 @@ def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_o
             commands.append("bwa aln reference.fasta {r2} {aln_opts} > {r2}.sai")
             commands.append("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {sampe_opts} > {r1}.sam")
         else:
-            commands.append("bwa samse reference.fasta {r1}.sai > {r1}.sam")
+            commands.append("bwa samse reference.fasta {r1}.sai {r1} > {r1}.sam")
 
     for command in commands:        
         run_shell(command.format(r1=reads_file1, r2=reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts))
