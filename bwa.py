@@ -41,6 +41,9 @@ def main():
     if reads_have_qualities:
         assert(all(['quality' in columns for columns in reads_columns.values()]))
     
+    if job["input"]["algorithm"] == "bwasw":
+        assert(not reads_are_paired) # bwasw does not support paired inputs
+    
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
     if 'indexed_reference' in job['input']:
@@ -96,9 +99,7 @@ def main():
         row_offsets.append(row_cursor)
         row_cursor += reads_descriptions[reads_ids[i]]["size"]
     
-    chunk_size = 25000000
-    if "chunk_size" in job["input"]:
-        chunk_size = job["input"]["chunk_size"]
+    chunk_size = job["input"]["chunk_size"]
 
     map_job_inputs = job["input"].copy()
     map_job_inputs["row_offsets"] = row_offsets
