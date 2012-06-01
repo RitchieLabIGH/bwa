@@ -48,6 +48,5 @@
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1"}
   ],
   "run": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "xz-utils"}]},
-  "folder": "/bwa",
-  "details": {"advancedInputs": ["trimming", "indexed_reference", "algorithm", "aln_n", "aln_o", "aln_e", "aln_i", "aln_d", "aln_l", "aln_k", "aln_m", "aln_M", "aln_O", "aln_E", "aln_R", "aln_q", "sampe_a", "sampe_o", "sampe_n", "sampe_N", "sampe_c", "sw_a", "sw_b", "sw_q", "sw_r", "sw_w", "sw_m", "sw_T", "sw_c", "sw_z", "sw_s", "sw_N", "chunk_size", "discard_unmapped_rows"]}
+  "folder": "/bwa"
 }
