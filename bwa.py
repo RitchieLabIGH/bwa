@@ -36,8 +36,13 @@ def main():
     all_reads_have_FlowReads_tag = all(['FlowReads' in desc['types'] for desc in reads_descriptions.values()])
     all_reads_have_LetterReads_tag = all(['LetterReads' in desc['types'] for desc in reads_descriptions.values()])
     reads_have_names = any(['name' in columns for columns in reads_columns.values()])
-    reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
     reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
+    reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
+    if reads_have_qualities:
+        assert(all(['quality' in columns for columns in reads_columns.values()]))
+    
+    if job["input"]["algorithm"] == "bwasw":
+        assert(not reads_are_paired) # bwasw does not support paired inputs
     
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
@@ -94,9 +99,7 @@ def main():
         row_offsets.append(row_cursor)
         row_cursor += reads_descriptions[reads_ids[i]]["size"]
     
-    chunk_size = 25000000
-    if "chunk_size" in job["input"]:
-        chunk_size = job["input"]["chunk_size"]
+    chunk_size = job["input"]["chunk_size"]
 
     map_job_inputs = job["input"].copy()
     map_job_inputs["row_offsets"] = row_offsets
@@ -129,14 +132,16 @@ def write_reads_to_fastq(reads_id, filename, seq_col='sequence', qual_col='quali
     row_id = start_row
     with open(filename, "w") as fh:
         for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col, qual_col], start=start_row, end=end_row):
-            fh.write("\n".join(['@'+str(row_id), row[0], "+", row[1], ""]))
+            for line in '@%d' % row_id, row[0], "+", row[1]:
+                print >>fh, line
             row_id += 1
 
 def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, end_row=None):
     row_id = start_row
     with open(filename, "w") as fh:
         for row in dxpy.open_dxgtable(reads_id).iterate_rows(columns=[seq_col], start=start_row, end=end_row):
-            fh.write("\n".join(['>'+str(row_id), row[0], ""]))
+            for line in '>%d' % row_id, row[0]:
+                print >>fh, line
             row_id += 1
 
 def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
