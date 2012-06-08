@@ -97,8 +97,8 @@ def main():
     row_offsets = []; row_cursor = 0
     for i in range(len(reads_ids)):
         row_offsets.append(row_cursor)
-        row_cursor += reads_descriptions[reads_ids[i]]["size"]
-    
+        row_cursor += reads_descriptions[reads_ids[i]]["length"]
+
     chunk_size = job["input"]["chunk_size"]
 
     map_job_inputs = job["input"].copy()
@@ -210,7 +210,7 @@ def map():
     num_rows = job['input']['num_rows']
     subjobs = []
     for i in range(len(reads_ids)):
-        reads_length = reads_descriptions[reads_ids[i]]["size"]
+        reads_length = reads_descriptions[reads_ids[i]]["length"]
         if start_row >= row_offsets[i] and start_row < row_offsets[i] + reads_length:
             rel_start = start_row - row_offsets[i]
             rel_end = min(reads_length, start_row - row_offsets[i] + num_rows) # Using half-open intervals: [start, end)
