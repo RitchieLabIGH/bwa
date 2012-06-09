@@ -13,6 +13,7 @@ def make_indexed_reference():
 
     run_shell("contigset2fasta %s reference.fasta" % job['input']['reference']['$dnanexus_link'])
     ref_details = dxpy.DXRecord(job['input']['reference']['$dnanexus_link']).get_details()
+    ref_name = dxpy.DXRecord(job['input']['reference']['$dnanexus_link']).describe()['name']
 
     # TODO: test if the genomes near the boundary work OK
     if sum(ref_details['contigs']['sizes']) < 2*1024*1024*1024:
@@ -24,6 +25,7 @@ def make_indexed_reference():
     indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
     indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
     indexed_ref_dxfile.set_details({'original_contigset': job['input']['reference']})
+    indexed_ref_dxfile.rename(ref_name + " (indexed for BWA)")
     indexed_ref_dxfile.close(block=True)
     return indexed_ref_dxfile
 
@@ -33,6 +35,11 @@ def main():
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
     reads_columns = {r: [col['name'] for col in desc['columns']] for r, desc in reads_descriptions.items()}
     
+    print reads_inputs
+    print reads_ids
+    print reads_descriptions
+    print reads_columns
+
     all_reads_have_FlowReads_tag = all(['FlowReads' in desc['types'] for desc in reads_descriptions.values()])
     all_reads_have_LetterReads_tag = all(['LetterReads' in desc['types'] for desc in reads_descriptions.values()])
     reads_have_names = any(['name' in columns for columns in reads_columns.values()])
@@ -64,7 +71,8 @@ def main():
                           ("error_probability", "uint8"),
                           ("qc", "string"),
                           ("cigar", "string"),
-                          ("template_id", "int64")])
+                          ("template_id", "int64"),
+                          ("read_group", "int32")])
     if reads_are_paired:
         table_columns.extend([("mate_id", "int32"), # TODO: int8
                               ("status2", "string"),
@@ -94,6 +102,33 @@ def main():
 
     t.add_types(["LetterMappings", "Mappings", "gri"])
 
+    # name table
+    if 'output name' in job['input']:
+        t.rename( job['input']['output name'] )
+    else:
+        first_reads_name = dxpy.DXGTable( job['input']['reads'][0] ).describe()['name']
+        contig_set_name = dxpy.DXRecord( t.get_details()['original_contigset'] ).describe()['name']
+        t.rename( first_reads_name+" mapped to "+contig_set_name )
+
+    # declare how many paired or single reads are in each reads table
+    read_group_lengths = []
+    for i in range(len(reads_ids)):
+        current_length = reads_descriptions[reads_ids[i]]["length"] 
+        if 'sequence2' in dxpy.DXGTable(reads_ids[i]).get_col_names():
+            num_pairs = current_length
+            num_singles = 0
+        else:
+            num_pairs = 0
+            num_singles = current_length
+
+        read_group_lengths.append( {"num_singles":num_singles, "num_pairs":num_pairs} )
+    
+    details = t.get_details()
+    details['read_groups'] = read_group_lengths
+    t.set_details(details)
+
+    
+
     row_offsets = []; row_cursor = 0
     for i in range(len(reads_ids)):
         row_offsets.append(row_cursor)
@@ -110,9 +145,6 @@ def main():
     postprocess_job_inputs = job["input"].copy()
     postprocess_job_inputs["table_id"] = t.get_id()
     
-    # Partition gtable part id range between jobs
-    num_jobs = max(1, 1 + row_cursor/chunk_size)
-    
     for start_row in xrange(0, row_cursor, chunk_size):
         map_job_inputs["start_row"] = start_row
         map_job = dxpy.new_dxjob(map_job_inputs, "map")
@@ -120,10 +152,8 @@ def main():
         postprocess_job_inputs["chunk%dresult" % start_row] = {'job': map_job.get_id(), 'field': 'ok'}
         postprocess_job_inputs["chunk%ddebug" % start_row] = {'job': map_job.get_id(), 'field': 'debug'}
         
-
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
-    # (TODO: how do JBORs interact with array outputs?)
     job['output']['mappings'] = {'job': postprocess_job.get_id(), 'field': 'mappings'}
 
     print "MAIN OUTPUT:", job['output']
@@ -211,10 +241,22 @@ def map():
     subjobs = []
     for i in range(len(reads_ids)):
         reads_length = reads_descriptions[reads_ids[i]]["length"]
-        if start_row >= row_offsets[i] and start_row < row_offsets[i] + reads_length:
-            rel_start = start_row - row_offsets[i]
+        read_group = i
+        # see if the reads table is part of this chunk
+
+        # if start is inside this reads table, add it
+        if ( 
+                # if this chunk crosses the 'end' boundry of this read
+                (start_row < row_offsets[i]+reads_length and start_row+num_rows > row_offsets[i]+reads_length) or
+                # if this chunk is entirely within this read
+                (start_row <= row_offsets[i] and start_row+num_rows > row_offsets[i]) or
+                # if this chunk crosses the 'start' boundry of this read
+                (start_row >= row_offsets[i] and start_row+num_rows < row_offsets[i]+reads_length)
+           ):
+
+            rel_start = max(start_row - row_offsets[i], 0)
             rel_end = min(reads_length, start_row - row_offsets[i] + num_rows) # Using half-open intervals: [start, end)
-            subjobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end})
+            subjobs.append({'reads_id': reads_ids[i], 'start_row': rel_start, 'end_row': rel_end, 'read_group':read_group})
     
     times.append(('parse parameters', time.time()))
     print 'SUBJOBS:', subjobs
@@ -253,6 +295,7 @@ def map():
         cmd += " --table_id '%s'" % job["input"]["table_id"]
         cmd += " --reads_id '%s'" % reads_id
         cmd += " --start_row %d" % subjob['start_row']
+        cmd += " --read_group %d" % subjob['read_group']
         
         if job['input'].get('discard_unmapped_rows'):
             cmd += " --discard_unmapped_rows"

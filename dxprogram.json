@@ -7,6 +7,7 @@
   "version": "0.1",
   "inputs": [
     {"name": "reads", "class": "array:gtable", "type": {"$or": ["LetterReads", "FlowReads"]}},
+    {"name": "output name", "class":"string", "optional":true},
     {"name": "trimming", "class": "string", "optional": true},
     {"name": "reference", "class": "record", "type": "ContigSet", "optional": true},
     {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1", "optional": true},

@@ -21,6 +21,7 @@ def main():
     parser.add_option("--reads_id", dest="reads_id", help="reads table used for mappings")
     parser.add_option("--start_row", dest="reads_offset", help="starting row in reads table, used for parallelizing")
     parser.add_option("--discard_unmapped_rows", dest="discard_unmapped", help="Discard unmapped rows", action='store_true', default=False)
+    parser.add_option("--read_group", dest="read_group", help="read group these mappings come from")
     (opts, args) = parser.parse_args()
     #if len(args) < 8:
         #parser.print_help()
@@ -33,16 +34,17 @@ def main():
     sam_filename = opts.sam_filename
     
     samFile = open(sam_filename)
-    count = 0
-    while count < 50:
-        print samFile.readline()
-        count += 1
+    #count = 0
+    #while count < 50:
+    #    print samFile.readline()
+    #    count += 1
     
     mappings_id = opts.mappings_id
 
     reads_id = opts.reads_id
 
     reads_offset = int(opts.reads_offset)
+    read_group = int(opts.read_group)
 
     discard_unmapped = opts.discard_unmapped
 
@@ -98,7 +100,7 @@ def main():
     print json.dumps(map_cols)
 
     for i in range(len(map_cols)):
-        map_col_lookup[map_cols[i]] = i  #account for ID column
+        map_col_lookup[map_cols[i]] = i  
 
     print map_col_lookup
 
@@ -165,7 +167,7 @@ def main():
             if len(sam_record) == 11: sam_record.append('')
             #################################
 
-            parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_lookup, isPaired )
+            parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_lookup, isPaired, read_group )
 
             ################################################################
 
@@ -264,7 +266,7 @@ def pull_sam_line( sam_file ):
     ##############################
 
                                  
-def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_lookup, isPaired ):
+def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_lookup, isPaired, read_group ):
                                      
      #### PARSE input sam file into mappings table schema ###########
         
@@ -290,7 +292,11 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
     hi2	From "hi" of the matching record (OUCH!)
     negative_strand2	0x20
     proper_pair	0x2
+    read_group  input from read table number we're reading from
     '''
+
+    # set read_group
+    map_row[map_col_lookup['read_group']] = read_group
 
     if isPaired == True:
 
