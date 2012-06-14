@@ -127,8 +127,6 @@ def main():
     details['read_groups'] = read_group_lengths
     t.set_details(details)
 
-    
-
     row_offsets = []; row_cursor = 0
     for i in range(len(reads_ids)):
         row_offsets.append(row_cursor)
