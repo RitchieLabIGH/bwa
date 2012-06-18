@@ -107,7 +107,12 @@ def main():
         t.rename( job['input']['output name'] )
     else:
         first_reads_name = dxpy.DXGTable( job['input']['reads'][0] ).describe()['name']
-        contig_set_name = dxpy.DXRecord( t.get_details()['original_contigset'] ).describe()['name']
+        # if we're working on an indexed_reference we're not guaranteed to have access to original_contigset
+        if 'indexed_reference' in job['input']:
+            contig_set_name = dxpy.DXFile( job['input']['indexed_reference'] ).describe()['name']
+            contig_set_name = contig_set_name.split('(index')[0]
+        else:
+            contig_set_name = dxpy.DXRecord( t.get_details()['original_contigset'] ).describe()['name']
         t.rename( first_reads_name+" mapped to "+contig_set_name )
 
     # declare how many paired or single reads are in each reads table
