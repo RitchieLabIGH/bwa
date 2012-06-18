@@ -157,12 +157,11 @@ def main():
             right_reads = []
 
             for i in range( len( sam_by_read_rows ) ):
-                #if paired:
                 if sam_by_read_rows[i][map_col_lookup['mate_id']] == 0:
                     left_reads.append( sam_by_read_rows[i] )
             
-                    if sam_by_read_rows[i][map_col_lookup['mate_id']] == 1:
-                        right_reads.append( sam_by_read_rows[i] )
+                if sam_by_read_rows[i][map_col_lookup['mate_id']] == 1:
+                    right_reads.append( sam_by_read_rows[i] )
 
                 # find matching mate
             for i in range( len( left_reads ) ):
@@ -327,12 +326,12 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
 
     ##########chr2	RNEXT#############
     if isPaired == True:
-        if sam_record[sam_lookup['RNEXT']] == '=':
-            map_row[map_col_lookup['chr2']] = sam_record[sam_lookup['RNAME']]
-
-        elif map_row[map_col_lookup['status2']] == 'UNMAPPED':
+        if map_row[map_col_lookup['status2']] == 'UNMAPPED':
             map_row[map_col_lookup['chr2']] = ''
 
+        elif sam_record[sam_lookup['RNEXT']] == '=':
+            map_row[map_col_lookup['chr2']] = sam_record[sam_lookup['RNAME']]
+        
         else:
             map_row[map_col_lookup['chr2']] = sam_record[sam_lookup['RNEXT']]
 
