@@ -321,5 +321,5 @@ def postprocess():
     d = t.get_details()
     d['time_report'] = time_report
     t.set_details(d)
-    t.close()
+    t.close(block=True)
     job['output']['mappings'] = dxpy.dxlink(t)
