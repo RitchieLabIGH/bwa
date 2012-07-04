@@ -9,8 +9,7 @@
     {"name": "reads", "class": "array:gtable", "type": {"$or": ["LetterReads", "FlowReads"]}},
     {"name": "output name", "class": "string", "optional": true},
     {"name": "trimming", "class": "string", "optional": true},
-    {"name": "reference", "class": "record", "type": "ContigSet", "optional": true},
-    {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1", "optional": true},
+    {"name": "reference", "class": "record", "type": {"$or": ["ContigSet", "BwaLetterContigSetV2"]}},
     {"name": "algorithm", "class": "string", "default": "auto"},
     {"name": "aln_n", "class": "float", "optional": true},
     {"name": "aln_o", "class": "int", "optional": true},
@@ -46,7 +45,7 @@
   ],
   "outputs": [
     {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings", "gri"]}},
-    {"name": "indexed_reference", "class": "file", "type": "BwaLetterContigSetV1"}
+    {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV2"}
   ],
   "run": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "xz-utils"}]},
   "folder": "/bwa",

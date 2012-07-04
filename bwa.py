@@ -21,13 +21,20 @@ def make_indexed_reference():
     else:
         subprocess.check_call("bwa index -a bwtsw reference.fasta", shell=True)
 
-    subprocess.check_call("XZ_OPT=-1 tar -cJf reference.tar.xz reference.fasta*", shell=True)
-    indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", keep_open=True)
-    indexed_ref_dxfile.add_types(["BwaLetterContigSetV1"])
-    indexed_ref_dxfile.set_details({'original_contigset': job['input']['reference']})
-    indexed_ref_dxfile.rename(ref_name + " (indexed for BWA)")
-    indexed_ref_dxfile.close(block=True)
-    return indexed_ref_dxfile
+    subprocess.check_call("XZ_OPT=-0 tar -cJf reference.tar.xz reference.fasta*", shell=True)
+    indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", hidden=True, wait_on_close=True)
+    
+    indexed_ref_record = dxpy.new_dxrecord(name=ref_name + " (indexed for BWA)",
+                                           types=["BwaLetterContigSetV2"],
+                                           details={'index_archive': dxpy.dxlink(indexed_ref_dxfile.get_id()),
+                                                    'original_contigset': job['input']['reference']})
+    indexed_ref_record.close()
+    
+    # TODO: dxpy project workspace convenience functions
+    if "projectWorkspace" in job:
+        indexed_ref_record.clone(job["projectWorkspace"])
+    
+    return indexed_ref_record
 
 def main():
     reads_inputs = job['input']['reads']
@@ -53,10 +60,26 @@ def main():
     
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
-    if 'indexed_reference' in job['input']:
-        job['output']['indexed_reference'] = job['input']['indexed_reference']
+    reference_record_types = dxpy.describe(job['input']['reference'])['types']
+    if "BwaLetterContigSetV2" in reference_record_types:
+        input_ref_is_indexed = True
+    elif "ContigSet" in reference_record_types:
+        input_ref_is_indexed = False
     else:
-        job['output']['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
+        raise dxpy.ProgramError("Unrecognized object passed as reference. It must be a ContigSet record or a BwaLetterContigSetV2 file")
+    
+    if input_ref_is_indexed:
+        job['output']['indexed_reference'] = job['input']['reference']
+    else:
+        found_cached_idx = False
+        for result in dxpy.find_data_objects(classname='record',
+                                             typename='BwaLetterContigSetV2',
+                                             link=job['input']['reference']['$dnanexus_link']):
+            job['output']['indexed_reference'] = dxpy.dxlink(result['id'])
+            found_cached_idx = True
+            break
+        if not found_cached_idx:
+            job['output']['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
     
     table_columns = [("sequence", "string")]
     if reads_have_names:
@@ -94,8 +117,8 @@ def main():
     gri_index = dxpy.DXGTable.genomic_range_index("chr", "lo", "hi")
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     
-    if 'indexed_reference' in job['input']:
-        original_contigset = dxpy.DXFile(job['input']['indexed_reference']).get_details()['original_contigset']
+    if input_ref_is_indexed:
+        original_contigset = dxpy.get_details(job['input']['reference'])['original_contigset']
     else:
         original_contigset = job['input']['reference']
     t.set_details({'original_contigset': original_contigset})
@@ -107,13 +130,11 @@ def main():
         t.rename( job['input']['output name'] )
     else:
         first_reads_name = dxpy.DXGTable( job['input']['reads'][0] ).describe()['name']
+        contig_set_name = dxpy.describe(job['input']['reference'])['name']
         # if we're working on an indexed_reference we're not guaranteed to have access to original_contigset
-        if 'indexed_reference' in job['input']:
-            contig_set_name = dxpy.DXFile( job['input']['indexed_reference'] ).describe()['name']
+        if input_ref_is_indexed:
             contig_set_name = contig_set_name.split('(index')[0]
-        else:
-            contig_set_name = dxpy.DXRecord( t.get_details()['original_contigset'] ).describe()['name']
-        t.rename( first_reads_name+" mapped to "+contig_set_name )
+        t.rename(first_reads_name + " mapped to " + contig_set_name)
 
     # declare how many paired or single reads are in each reads table
     read_group_lengths = []
@@ -219,7 +240,8 @@ def map():
     reads_are_paired = any(['sequence2' in columns for columns in reads_columns.values()])
 
     times.append(('preamble', time.time()))
-    dxpy.download_dxfile(job["input"]["indexed_reference"], "reference.tar.xz")
+
+    dxpy.download_dxfile(dxpy.get_details(job["input"]["indexed_reference"])['index_archive'], "reference.tar.xz")
     times.append(('download reference', time.time()))
 
     # TODO: Async everything below
