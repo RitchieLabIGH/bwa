@@ -4,7 +4,6 @@
   "summary": "Burrows-Wheeler Aligner",
   "description": "Burrows-Wheeler Aligner (BWA) is an efficient program that aligns relatively short nucleotide sequences against a long reference sequence such as the human genome.",
   "dxapi": "1.03rc",
-  "version": "0.1",
   "inputSpec": [
     {"name": "reads", "class": "array:gtable", "type": {"$or": ["LetterReads", "FlowReads"]}},
     {"name": "output name", "class": "string", "optional": true},
