@@ -1,5 +1,18 @@
 {
   "version":"0.0.6+block",
   "categories": ["Alignment"],
-  "globalWorkspace": []
+  "globalWorkspace": [],
+  "details": {
+    "contactUrl": "http://develop.dnanexus.com/Apps/bwa",
+    "contactOrgs": ["org-dnanexus"],
+    "repoUrl": "git@github.com:dnanexus/bwa.git",
+    "upstreamUrl": "http://bio-bwa.sourceforge.net/",
+    "upstreamVersion": "0.6.2",
+    "upstreamLicenses": ["GPL3"],
+    "citations": [
+	"http://www.ncbi.nlm.nih.gov/pubmed/19451168",
+	"http://www.ncbi.nlm.nih.gov/pubmed/20080505"
+    ]
+  }
+
 }
