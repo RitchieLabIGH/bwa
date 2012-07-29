@@ -1,7 +1,7 @@
 {
   "version":"0.0.6+block",
   "categories": ["Alignment"],
-  "globalWorkspace": [],
+  "resources": [],
   "details": {
     "contactUrl": "http://develop.dnanexus.com/Apps/bwa",
     "contactOrgs": ["org-dnanexus"],
