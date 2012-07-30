@@ -8,12 +8,12 @@ def run_shell(command):
     logging.debug("Running "+command)
     subprocess.check_call(command, shell=True)
 
-def make_indexed_reference():
+def make_indexed_reference(job_inputs):
     logging.info("Indexing reference genome")
 
-    run_shell("contigset2fasta %s reference.fasta" % job['input']['reference']['$dnanexus_link'])
-    ref_details = dxpy.DXRecord(job['input']['reference']['$dnanexus_link']).get_details()
-    ref_name = dxpy.DXRecord(job['input']['reference']['$dnanexus_link']).describe()['name']
+    run_shell("contigset2fasta %s reference.fasta" % job_inputs['reference']['$dnanexus_link'])
+    ref_details = dxpy.DXRecord(job_inputs['reference']['$dnanexus_link']).get_details()
+    ref_name = dxpy.DXRecord(job_inputs['reference']['$dnanexus_link']).describe()['name']
 
     # TODO: test if the genomes near the boundary work OK
     if sum(ref_details['contigs']['sizes']) < 2*1024*1024*1024:
@@ -27,17 +27,20 @@ def make_indexed_reference():
     indexed_ref_record = dxpy.new_dxrecord(name=ref_name + " (indexed for BWA)",
                                            types=["BwaLetterContigSetV2"],
                                            details={'index_archive': dxpy.dxlink(indexed_ref_dxfile.get_id()),
-                                                    'original_contigset': job['input']['reference']})
+                                                    'original_contigset': job_inputs['reference']})
     indexed_ref_record.close()
     
     # TODO: dxpy project workspace convenience functions
-    if "projectWorkspace" in job:
-        indexed_ref_record.clone(job["projectWorkspace"])
+# FIXME
+#    if "projectWorkspace" in job:
+#        indexed_ref_record.clone(job["projectWorkspace"])
     
     return indexed_ref_record
 
-def main():
-    reads_inputs = job['input']['reads']
+@dxpy.entry_point('main')
+def main(**job_inputs):
+    job_outputs = {}
+    reads_inputs = job_inputs['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
     reads_columns = {r: [col['name'] for col in desc['columns']] for r, desc in reads_descriptions.items()}
@@ -55,12 +58,12 @@ def main():
     if reads_have_qualities:
         assert(all(['quality' in columns for columns in reads_columns.values()]))
     
-    if job["input"]["algorithm"] == "bwasw":
+    if job_inputs["algorithm"] == "bwasw":
         assert(not reads_are_paired) # bwasw does not support paired inputs
     
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
-    reference_record_types = dxpy.describe(job['input']['reference'])['types']
+    reference_record_types = dxpy.describe(job_inputs['reference'])['types']
     if "BwaLetterContigSetV2" in reference_record_types:
         input_ref_is_indexed = True
     elif "ContigSet" in reference_record_types:
@@ -69,17 +72,17 @@ def main():
         raise dxpy.ProgramError("Unrecognized object passed as reference. It must be a ContigSet record or a BwaLetterContigSetV2 file")
     
     if input_ref_is_indexed:
-        job['output']['indexed_reference'] = job['input']['reference']
+        job_outputs['indexed_reference'] = job_inputs['reference']
     else:
         found_cached_idx = False
         for result in dxpy.find_data_objects(classname='record',
                                              typename='BwaLetterContigSetV2',
-                                             link=job['input']['reference']['$dnanexus_link']):
-            job['output']['indexed_reference'] = dxpy.dxlink(result['id'])
+                                             link=job_inputs['reference']['$dnanexus_link']):
+            job_outputs['indexed_reference'] = dxpy.dxlink(result['id'])
             found_cached_idx = True
             break
         if not found_cached_idx:
-            job['output']['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
+            job_outputs['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
     
     table_columns = [("sequence", "string")]
     if reads_have_names:
@@ -118,19 +121,19 @@ def main():
     t = dxpy.new_dxgtable(column_descriptors, indices=[gri_index])
     
     if input_ref_is_indexed:
-        original_contigset = dxpy.get_details(job['input']['reference'])['original_contigset']
+        original_contigset = dxpy.get_details(job_inputs['reference'])['original_contigset']
     else:
-        original_contigset = job['input']['reference']
+        original_contigset = job_inputs['reference']
     t.set_details({'original_contigset': original_contigset})
 
     t.add_types(["LetterMappings", "Mappings", "gri"])
 
     # name table
-    if 'output name' in job['input']:
-        t.rename( job['input']['output name'] )
+    if 'output name' in job_inputs:
+        t.rename( job_inputs['output name'] )
     else:
-        first_reads_name = dxpy.DXGTable( job['input']['reads'][0] ).describe()['name']
-        contig_set_name = dxpy.describe(job['input']['reference'])['name']
+        first_reads_name = dxpy.DXGTable( job_inputs['reads'][0] ).describe()['name']
+        contig_set_name = dxpy.describe(job_inputs['reference'])['name']
         # if we're working on an indexed_reference we're not guaranteed to have access to original_contigset
         if input_ref_is_indexed:
             contig_set_name = contig_set_name.split('(index')[0]
@@ -158,15 +161,15 @@ def main():
         row_offsets.append(row_cursor)
         row_cursor += reads_descriptions[reads_ids[i]]["length"]
 
-    chunk_size = job["input"]["chunk_size"]
+    chunk_size = job_inputs["chunk_size"]
 
-    map_job_inputs = job["input"].copy()
+    map_job_inputs = job_inputs.copy()
     map_job_inputs["row_offsets"] = row_offsets
     map_job_inputs["num_rows"] = chunk_size
     map_job_inputs["table_id"] = t.get_id()
-    map_job_inputs["indexed_reference"] = job['output']['indexed_reference']
+    map_job_inputs["indexed_reference"] = job_outputs['indexed_reference']
 
-    postprocess_job_inputs = job["input"].copy()
+    postprocess_job_inputs = job_inputs.copy()
     postprocess_job_inputs["table_id"] = t.get_id()
     
     for start_row in xrange(0, row_cursor, chunk_size):
@@ -178,9 +181,10 @@ def main():
         
     postprocess_job = dxpy.new_dxjob(postprocess_job_inputs, "postprocess")
 
-    job['output']['mappings'] = {'job': postprocess_job.get_id(), 'field': 'mappings'}
+    job_outputs['mappings'] = {'job': postprocess_job.get_id(), 'field': 'mappings'}
 
-    print "MAIN OUTPUT:", job['output']
+    print "MAIN OUTPUT:", job_outputs
+    return job_outputs
 
 def write_reads_to_fastq(reads_id, filename, seq_col='sequence', qual_col='quality', start_row=0, end_row=None):
     row_id = start_row
@@ -229,10 +233,12 @@ def parse_bwa_cmd_opts(input):
             sw_opts += " -"+opt+" "+str(input['sw_'+opt])
     return aln_opts, sampe_opts, sw_opts
 
-def map():
-    print "Map:", job["input"]
+@dxpy.entry_point('map')
+def map(**job_inputs):
+    print "Map:", job_inputs
+    job_outputs = {}
     times = [('start', time.time())]
-    reads_inputs = job['input']['reads']
+    reads_inputs = job_inputs['reads']
     reads_ids = [r['$dnanexus_link'] for r in reads_inputs]
     reads_descriptions = {r: dxpy.DXGTable(r).describe() for r in reads_ids}
     reads_columns = {r: [col['name'] for col in desc['columns']] for r, desc in reads_descriptions.items()}
@@ -241,28 +247,28 @@ def map():
 
     times.append(('preamble', time.time()))
 
-    dxpy.download_dxfile(dxpy.get_details(job["input"]["indexed_reference"])['index_archive'], "reference.tar.xz")
+    dxpy.download_dxfile(dxpy.get_details(job_inputs["indexed_reference"])['index_archive'], "reference.tar.xz")
     times.append(('download reference', time.time()))
 
     # TODO: Async everything below
     # subprocess.check_call("pixz -d reference.tar.xz && tar -xf reference.tar", shell=True)
     subprocess.check_call("tar -xJf reference.tar.xz", shell=True)
 
-    if job["input"]["algorithm"] == "bwasw":
+    if job_inputs["algorithm"] == "bwasw":
         bwa_algorithm = "bwasw"
     else:
         # algorithm = aln or auto. TODO: check what auto should do
         bwa_algorithm = "aln"
     
-    aln_opts, sampe_opts, sw_opts = parse_bwa_cmd_opts(job['input'])
+    aln_opts, sampe_opts, sw_opts = parse_bwa_cmd_opts(job_inputs)
     
     # Set the number of threads BWA parameter to the apparent number of CPUs.
     aln_opts += " -t " + str(cpu_count())
     sw_opts += " -t " + str(cpu_count())
     
-    row_offsets = job['input']['row_offsets']
-    start_row = job['input']['start_row']
-    num_rows = job['input']['num_rows']
+    row_offsets = job_inputs['row_offsets']
+    start_row = job_inputs['start_row']
+    num_rows = job_inputs['num_rows']
     subjobs = []
     for i in range(len(reads_ids)):
         reads_length = reads_descriptions[reads_ids[i]]["length"]
@@ -317,31 +323,37 @@ def map():
         
         cmd = "dx_storeSamAsMappingsTable_bwa"
         cmd += " --alignments '%s.sam'" % reads_file1
-        cmd += " --table_id '%s'" % job["input"]["table_id"]
+        cmd += " --table_id '%s'" % job_inputs["table_id"]
         cmd += " --reads_id '%s'" % reads_id
         cmd += " --start_row %d" % subjob['start_row']
         cmd += " --read_group %d" % subjob['read_group']
         
-        if job['input'].get('discard_unmapped_rows'):
+        if job_inputs.get('discard_unmapped_rows'):
             cmd += " --discard_unmapped_rows"
         run_shell(cmd)
         times.append(('run table upload (subchunk %d)' % subchunk_id, time.time()))
 
-    job["output"]["ok"] = True
+    job_outputs["ok"] = True
     
     timing_report = {}
     for i in range(len(times)-1):
         timing_report[times[i+1][0]] = times[i+1][1] - times[i][1]
-    job["output"]["debug"] = {'times': timing_report}
+    job_outputs["debug"] = {'times': timing_report}
+    return job_outputs
 
-def postprocess():
-    print "Postprocess:", job["input"]
+@dxpy.entry_point('postprocess')
+def postprocess(**job_inputs):
+    print "Postprocess:", job_inputs
+    job_outputs = {}
+
+    time_report = {k: v for k, v in job_inputs.iteritems() if re.match("chunk\d+debug", k)}
     
-    time_report = {k: v for k, v in job["input"].iteritems() if re.match("chunk\d+debug", k)}
-    
-    t = dxpy.DXGTable(job["input"]["table_id"])
+    t = dxpy.DXGTable(job_inputs["table_id"])
     d = t.get_details()
     d['time_report'] = time_report
     t.set_details(d)
     t.close(block=True)
-    job['output']['mappings'] = dxpy.dxlink(t)
+    job_outputs['mappings'] = dxpy.dxlink(t)
+    return job_outputs
+
+dxpy.run()
