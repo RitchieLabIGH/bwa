@@ -46,7 +46,7 @@
     {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings", "gri"]}},
     {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV2"}
   ],
-  "runSpec": {"file": "bwa.py", "interpreter": "python2.7_old", "execDepends": [{"name": "xz-utils"}]},
+  "runSpec": {"file": "bwa.py", "interpreter": "python2.7", "execDepends": [{"name": "xz-utils"}]},
   "folder": "/bwa",
   "details": { "advancedInputs": [
     "algorithm", 
