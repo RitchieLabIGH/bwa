@@ -266,9 +266,9 @@ def map(**job_inputs):
     aln_opts += " -t " + str(cpu_count())
     sw_opts += " -t " + str(cpu_count())
     
-    row_offsets = job_inputs['row_offsets']
-    start_row = job_inputs['start_row']
-    num_rows = job_inputs['num_rows']
+    row_offsets = job_inputs['row_offsets']   # starting row for each reads table if you added them all up
+    start_row = job_inputs['start_row']       # the position in this chunk relative to the row_offsets 'total'
+    num_rows = job_inputs['num_rows']         # size of chunk to do this time
     subjobs = []
     for i in range(len(reads_ids)):
         reads_length = reads_descriptions[reads_ids[i]]["length"]
@@ -276,14 +276,14 @@ def map(**job_inputs):
         # see if the reads table is part of this chunk
 
         # if start is inside this reads table, add it
-        if ( 
-                # if this chunk crosses the 'end' boundry of this read
-                (start_row < row_offsets[i]+reads_length and start_row+num_rows > row_offsets[i]+reads_length) or
-                # if this chunk is entirely within this read
-                (start_row <= row_offsets[i] and start_row+num_rows > row_offsets[i]) or
-                # if this chunk crosses the 'start' boundry of this read
-                (start_row >= row_offsets[i] and start_row+num_rows < row_offsets[i]+reads_length)
-           ):
+        # doing this in the form:   (A_start < B_end) and (A_end > B_start)
+        # A is the reads tables
+        # B is the current chunk
+        # A_start = row_offsets[i]
+        # A_end = row_offsets[i] + reads_length
+        # B_start = start_row
+        # B_end = start_row + num_rows
+        if row_offsets[i] < (start_row+num_rows) and (row_offsets[i]+reads_length) > start_row:
 
             rel_start = max(start_row - row_offsets[i], 0)
             rel_end = min(reads_length, start_row - row_offsets[i] + num_rows) # Using half-open intervals: [start, end)
