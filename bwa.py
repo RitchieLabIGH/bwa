@@ -82,7 +82,7 @@ def main(**job_inputs):
             found_cached_idx = True
             break
         if not found_cached_idx:
-            job_outputs['indexed_reference'] = dxpy.dxlink(make_indexed_reference())
+            job_outputs['indexed_reference'] = dxpy.dxlink(make_indexed_reference(job_inputs))
     
     table_columns = [("sequence", "string")]
     if reads_have_names:
