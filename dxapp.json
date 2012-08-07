@@ -90,8 +90,8 @@
     "upstreamVersion": "0.6.2",
     "upstreamLicenses": ["GPL3"],
     "citations": [
-	"http://www.ncbi.nlm.nih.gov/pubmed/19451168",
-	"http://www.ncbi.nlm.nih.gov/pubmed/20080505"
+        "doi:10.1093/bioinformatics/btp324",
+        "doi:10.1093/bioinformatics/btp698"
     ]
   },
   "version":"0.0.6+block",
