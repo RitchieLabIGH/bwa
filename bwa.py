@@ -99,6 +99,9 @@ def main(**job_inputs):
                           ("cigar", "string"),
                           ("template_id", "int64"),
                           ("read_group", "int32")])
+
+    # optional sam fields: RG BC XC XT NM CM XN SM AM XM X0 X1 XG MD XA
+
     if reads_are_paired:
         table_columns.extend([("mate_id", "int32"), # TODO: int8
                               ("status2", "string"),
@@ -107,6 +110,7 @@ def main(**job_inputs):
                               ("hi2", "int32"),
                               ("negative_strand2", "boolean"),
                               ("proper_pair", "boolean")])
+
     if all_reads_have_FlowReads_tag:
         table_columns.extend([("flowgram", "string"),
                               ("flow_indices", "string"),
@@ -114,6 +118,23 @@ def main(**job_inputs):
                               ("clip_qual_right", "int32"),
                               ("clip_adapter_left", "int32"),
                               ("clip_adapter_right", "int32")])
+
+    table_columns.extend([("sam_field_BC", "string"),
+                          ("sam_field_XC", "int32"),
+                          ("sam_field_XT", "string"),
+                          ("sam_field_NM", "int32"),
+                          ("sam_field_CM", "int32"),
+                          ("sam_field_XN", "int32"),
+                          ("sam_field_SM", "int32"),
+                          ("sam_field_AM", "int32"),
+                          ("sam_field_XM", "int32"),
+                          ("sam_field_X0", "int32"),
+                          ("sam_field_X1", "int32"),
+                          ("sam_field_XG", "int32"),
+                          ("sam_field_MD", "string"),
+                          ("sam_field_XA", "string"),
+                          ("sam_optional_fields", "string")])
+
     
     column_descriptors = [dxpy.DXGTable.make_column_desc(name, type) for name, type in table_columns]
     
