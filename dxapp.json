@@ -94,7 +94,7 @@
         "doi:10.1093/bioinformatics/btp698"
     ]
   },
-  "version":"0.0.6+block",
+  "version":"0.0.7",
   "categories": ["Alignment"],
   "resources": []
 }
