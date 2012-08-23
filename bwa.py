@@ -157,7 +157,7 @@ def main(**job_inputs):
         contig_set_name = dxpy.describe(job_inputs['reference'])['name']
         # if we're working on an indexed_reference we're not guaranteed to have access to original_contigset
         if input_ref_is_indexed:
-            contig_set_name = contig_set_name.split('(index')[0]
+            contig_set_name = contig_set_name.split(' (index')[0]
         t.rename(first_reads_name + " mapped to " + contig_set_name)
 
     # declare how many paired or single reads are in each reads table
