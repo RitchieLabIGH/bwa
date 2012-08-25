@@ -239,7 +239,8 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
     hi	lo + count of M/D/N/=/X in CIGAR
     negative_strand	0x10
     error_probability	MAPQ
-    qc	0x200 and/or 0x400 -- TBD
+    qc_fail	0x200 
+    duplicate   0x400
     cigar	CIGAR
     template_id	From a unique enumeration of QNAME (OUCH!)
     mate_id	0x1 ? (0x40 ? 0 : (0x80 ? 1 : FAIL)) : -1
@@ -374,15 +375,18 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
     ##########error_probability	MAPQ###########
     map_row[map_col_lookup['error_probability']] = sam_record[sam_lookup['MAPQ']]
 
-    ##########qc	0x200 and/or 0x400 -- TBD############
-    if (sam_record[sam_lookup['FLAG']] & 0x200 == 1 and sam_record[sam_lookup['FLAG']] & 0x400 == 1):
-        map_row[map_col_lookup['qc']] = "both not qc and PCR or optical duplicate"
-    elif sam_record[sam_lookup['FLAG']] & 0x200 == 1:
-        map_row[map_col_lookup['qc']] = "not passing quality controls"
-    elif sam_record[sam_lookup['FLAG']] & 0x400 == 1:
-        map_row[map_col_lookup['qc']] = "PCR or optical duplicate"
+    ##########qc_fail	0x200 ###################
+    if sam_record[sam_lookup['FLAG']] & 0x200 == 1:
+        map_row[map_col_lookup['qc_fail']] = True
     else:
-        map_row[map_col_lookup['qc']] = ""
+        map_row[map_col_lookup['qc_fail']] = False
+            
+    ##########duplicate   0x400 ################
+
+    if sam_record[sam_lookup['FLAG']] & 0x400 == 1:
+        map_row[map_col_lookup['duplicate']] = True
+    else:
+        map_row[map_col_lookup['duplicate']] = False
 
     ##########cigar	CIGAR###########
     map_row[map_col_lookup['cigar']] = sam_record[sam_lookup['CIGAR']]

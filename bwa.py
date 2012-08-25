@@ -95,7 +95,8 @@ def main(**job_inputs):
                           ("hi", "int32"),
                           ("negative_strand", "boolean"),
                           ("error_probability", "uint8"),
-                          ("qc", "string"),
+                          ("qc_fail", "boolean"),
+                          ("duplicate", "boolean"),
                           ("cigar", "string"),
                           ("template_id", "int64"),
                           ("read_group", "int32")])
