@@ -82,7 +82,7 @@
       "chunk_size", 
       "discard_unmapped_rows"
     ],
-    "contactUrl": "http://develop.dnanexus.com/Apps/bwa",
+    "contactUrl": "http://wiki.dnanexus.com/Apps/bwa",
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus/bwa.git",
     "upstreamUrl": "http://bio-bwa.sourceforge.net/",
