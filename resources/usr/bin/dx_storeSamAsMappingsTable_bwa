@@ -420,7 +420,10 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
                 elif column_type == "int32":
                     map_row[map_col_lookup[sam_field_col_name]] = int(split_tag[2])
             else:
-                sam_optional_fields = " ".join([sam_optional_fields, t])
+                if sam_optional_fields == "":
+                    sam_optional_fields = t
+                else:
+                    sam_optional_fields = " ".join([sam_optional_fields, t])
 
         map_row[map_col_lookup["sam_optional_fields"]] = sam_optional_fields
 
