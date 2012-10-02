@@ -224,7 +224,7 @@ def write_reads_to_fasta(reads_id, filename, seq_col='sequence', start_row=0, en
                 print >>fh, line
             row_id += 1
 
-def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts=''):
+def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_opts='', sw_opts='', samse_opts=''):
     commands = []
     if algorithm == "bwasw":
         if reads_file2 is None:
@@ -237,23 +237,29 @@ def run_alignment(algorithm, reads_file1, reads_file2=None, aln_opts='', sampe_o
             commands.append("bwa aln reference.fasta {r2} {aln_opts} > {r2}.sai")
             commands.append("bwa sampe reference.fasta {r1}.sai {r2}.sai {r1} {r2} {sampe_opts} > {r1}.sam")
         else:
-            commands.append("bwa samse reference.fasta {r1}.sai {r1} > {r1}.sam")
+            commands.append("bwa samse reference.fasta {r1}.sai {r1} {samse_opts} > {r1}.sam")
 
     for command in commands:        
-        run_shell(command.format(r1=reads_file1, r2=reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts))
+        run_shell(command.format(r1=reads_file1, r2=reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts))
 
 def parse_bwa_cmd_opts(input):
-    aln_opts, sampe_opts, sw_opts = '', '', ''
+    aln_opts, sampe_opts, sw_opts, samse_opts = '', '', '', ''
     for opt in 'n', 'o', 'e', 'i', 'd', 'l', 'k', 'm', 'M', 'O', 'E', 'R', 'q':
         if 'aln_'+opt in input:
             aln_opts += " -"+opt+" "+str(input['aln_'+opt])
+    if input['aln_N']:
+        aln_opts += ' -N'
     for opt in 'a', 'o', 'n', 'N', 'c':
         if 'sampe_'+opt in input:
             sampe_opts += " -"+opt+" "+str(input['sampe_'+opt])
+    if input['sampe_s']:
+        sampe_opts += ' -s'
+    if 'samse_n' in input:
+         samse_opts += ' -n ' + str(input['samse_n'])
     for opt in 'a', 'b', 'q', 'r', 'w', 'm', 'T', 'c', 'z', 's', 'N':
         if 'sw_'+opt in input:
             sw_opts += " -"+opt+" "+str(input['sw_'+opt])
-    return aln_opts, sampe_opts, sw_opts
+    return aln_opts, sampe_opts, sw_opts, samse_opts
 
 @dxpy.entry_point('map')
 def map(**job_inputs):
@@ -282,7 +288,7 @@ def map(**job_inputs):
         # algorithm = aln or auto. TODO: check what auto should do
         bwa_algorithm = "aln"
     
-    aln_opts, sampe_opts, sw_opts = parse_bwa_cmd_opts(job_inputs)
+    aln_opts, sampe_opts, sw_opts, samse_opts = parse_bwa_cmd_opts(job_inputs)
     
     # Set the number of threads BWA parameter to the apparent number of CPUs.
     aln_opts += " -t " + str(cpu_count())
@@ -325,23 +331,23 @@ def map(**job_inputs):
                 write_reads_to_fastq(reads_id, reads_file1, seq_col='sequence', qual_col='quality', start_row=subjob['start_row'], end_row=subjob['end_row'])
                 write_reads_to_fastq(reads_id, reads_file2, seq_col='sequence2', qual_col='quality2', start_row=subjob['start_row'], end_row=subjob['end_row'])
                 times.append(('fetch reads (subchunk %d)' % subchunk_id, time.time()))
-                run_alignment(bwa_algorithm, reads_file1, reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
+                run_alignment(bwa_algorithm, reads_file1, reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts)
                 times.append(('run alignment (subchunk %d)' % subchunk_id, time.time()))
             else:
                 reads_file1 = "input"+str(subchunk_id)+".fastq"
                 write_reads_to_fastq(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
-                run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
+                run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts)
         else: # No qualities, use plain fasta
             if reads_are_paired:
                 reads_file1 = "input"+str(subchunk_id)+"_1.fasta"
                 reads_file2 = "input"+str(subchunk_id)+"_2.fasta"
                 write_reads_to_fasta(reads_id, reads_file1, seq_col='sequence', start_row=subjob['start_row'], end_row=subjob['end_row'])
                 write_reads_to_fasta(reads_id, reads_file2, seq_col='sequence2', start_row=subjob['start_row'], end_row=subjob['end_row'])
-                run_alignment(bwa_algorithm, reads_file1, reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
+                run_alignment(bwa_algorithm, reads_file1, reads_file2, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts)
             else:
                 reads_file1 = "input"+str(subchunk_id)+".fasta"
                 write_reads_to_fasta(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
-                run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts)
+                run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts)
         
         cmd = "dx_storeSamAsMappingsTable_bwa"
         cmd += " --alignments '%s.sam'" % reads_file1
