@@ -4,6 +4,9 @@ from multiprocessing import Pool, cpu_count
 
 logging.getLogger().setLevel(logging.DEBUG)
 
+# Pypy specific workaround
+os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH') + ":/usr/share/pyshared"
+
 def run_shell(command):
     logging.debug("Running "+command)
     subprocess.check_call(command, shell=True)
@@ -348,7 +351,9 @@ def map(**job_inputs):
                 reads_file1 = "input"+str(subchunk_id)+".fasta"
                 write_reads_to_fasta(reads_id, reads_file1, start_row=subjob['start_row'], end_row=subjob['end_row'])
                 run_alignment(bwa_algorithm, reads_file1, aln_opts=aln_opts, sampe_opts=sampe_opts, sw_opts=sw_opts, samse_opts=samse_opts)
-        
+
+        times.append(('run alignment (subchunk %d)' % subchunk_id, time.time()))
+
         cmd = "dx_storeSamAsMappingsTable_bwa"
         cmd += " --alignments '%s.sam'" % reads_file1
         cmd += " --table_id '%s'" % job_inputs["table_id"]
