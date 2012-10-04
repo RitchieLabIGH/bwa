@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env pypy
 
 # TODO  add hi2 for paired reads!
 
@@ -27,6 +27,8 @@ def main():
     reads_end = -1
 
     sam_filename = opts.sam_filename
+
+    print "sam file : %s" % sam_filename
     
     samFile = open(sam_filename)
     
@@ -38,7 +40,6 @@ def main():
 
     discard_unmapped = opts.discard_unmapped
 
-    print "sam file : %s" % sam_filename
     print "mappings table : %s" % mappings_id
     print "reads table : %s" % reads_id
     print "reads offset : %d" % reads_offset
