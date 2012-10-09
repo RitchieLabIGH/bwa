@@ -209,6 +209,7 @@ def main():
         if sam_record == '':
             break
 
+    mappings_table.flush()
     print json.dumps({'table_id': mappings_table.get_id()})
                            
 def pull_sam_line( sam_file ):
