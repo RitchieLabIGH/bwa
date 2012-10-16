@@ -27,8 +27,6 @@ def main():
     reads_end = -1
 
     sam_filename = opts.sam_filename
-
-    print "sam file : %s" % sam_filename
     
     samFile = open(sam_filename)
     
@@ -40,6 +38,7 @@ def main():
 
     discard_unmapped = opts.discard_unmapped
 
+    print "sam file : %s" % sam_filename
     print "mappings table : %s" % mappings_id
     print "reads table : %s" % reads_id
     print "reads offset : %d" % reads_offset
@@ -209,7 +208,6 @@ def main():
         if sam_record == '':
             break
 
-    mappings_table.flush()
     print json.dumps({'table_id': mappings_table.get_id()})
                            
 def pull_sam_line( sam_file ):
@@ -391,7 +389,10 @@ def parse_sam( map_row, sam_record, read, map_col_lookup, sam_lookup, read_col_l
         map_row[map_col_lookup['duplicate']] = False
 
     ##########cigar	CIGAR###########
-    map_row[map_col_lookup['cigar']] = sam_record[sam_lookup['CIGAR']]
+    if map_row[map_col_lookup['status']] == "UNMAPPED":
+        map_row[map_col_lookup['cigar']] = "*"
+    else:
+        map_row[map_col_lookup['cigar']] = line[sam_lookup['CIGAR']]
 
     ##########template_id	From a unique enumeration of QNAME (OUCH!)#######
     map_row[map_col_lookup['template_id']] = read[read_col_lookup['id']]
