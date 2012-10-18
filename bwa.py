@@ -60,7 +60,11 @@ def main(**job_inputs):
     reads_have_qualities = any(['quality' in columns for columns in reads_columns.values()])
     if reads_have_qualities:
         assert(all(['quality' in columns for columns in reads_columns.values()]))
-    
+    if reads_are_paired:
+        all_paired = all(['sequence2' in columns for columns in reads_columns.values()])
+        if not all_paired:
+            raise dxpy.AppError("Reads to be mapped must be either all paired or all unpaired.  App input contains both paired and unpaired reads.")
+
     if job_inputs["algorithm"] == "bwasw":
         assert(not reads_are_paired) # bwasw does not support paired inputs
     
