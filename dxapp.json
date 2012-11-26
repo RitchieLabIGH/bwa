@@ -57,6 +57,8 @@
     ]
   },
   "folder": "/bwa",
+  "version":"1.0.0",
+  "categories": ["Alignment"],
   "details": {
     "advancedInputs": [
       "algorithm", 
@@ -98,16 +100,13 @@
     "contactUrl": "http://wiki.dnanexus.com/Apps/bwa",
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus/bwa.git",
+    "upstreamAuthor":"Heng Li and Richard Durbin",
+    "upstreamVersion": "0.5.9-r16",
     "upstreamUrl": "http://bio-bwa.sourceforge.net/",
-    "upstreamVersion": "0.6.2",
-    "upstreamLicenses": ["GPL3"],
+    "upstreamLicenses": ["GPLv3"],
     "citations": [
         "doi:10.1093/bioinformatics/btp324",
         "doi:10.1093/bioinformatics/btp698"
     ]
-  },
-  "version":"0.0.10",
-  "categories": ["Alignment"],
-  "resources": [],
-  "access": {"network": ["github.com"]}
+  }
 }
