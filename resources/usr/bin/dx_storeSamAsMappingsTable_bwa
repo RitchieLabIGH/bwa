@@ -134,7 +134,7 @@ def main():
                 # if we have a default field
                 if map_cols[i].startswith("sam_field_"):
                     if col_type[i] == 'int32':
-                        map_row[i] = MAX_INT
+                        map_row[i] = dxpy.NULL
                     elif col_type[i] == 'float':
                         map_row[i] = float('nan')
                     elif col_type[i] == 'string':
