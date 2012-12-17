@@ -3,6 +3,7 @@ import subprocess, logging, os, time, re
 from multiprocessing import Pool, cpu_count
 
 logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
 
 # Pypy specific workaround
 os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH') + ":/usr/share/pyshared"
