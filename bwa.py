@@ -159,8 +159,8 @@ def main(**job_inputs):
     t.add_types(["LetterMappings", "Mappings", "gri"])
 
     # name table
-    if 'output name' in job_inputs:
-        t.rename( job_inputs['output name'] )
+    if 'output_name' in job_inputs:
+        t.rename(job_inputs['output_name'])
     else:
         first_reads_name = dxpy.DXGTable( job_inputs['reads'][0] ).describe()['name']
         contig_set_name = dxpy.describe(job_inputs['reference'])['name']
