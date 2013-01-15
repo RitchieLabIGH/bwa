@@ -2,13 +2,12 @@
   "name": "bwa",
   "title": "BWA",
   "summary": "Burrows-Wheeler Aligner",
-  "description": "Burrows-Wheeler Aligner (BWA) is an efficient program that aligns relatively short nucleotide sequences against a long reference sequence such as the human genome.",
   "dxapi": "1.0.0",
   "inputSpec": [
-    {"name": "reads", "class": "array:gtable", "type": "LetterReads"},
-    {"name": "output_name", "class": "string", "optional": true},
-    {"name": "reference", "class": "record", "type": {"$or": ["ContigSet", "BwaLetterContigSetV2"]}},
-    {"name": "algorithm", "class": "string", "default": "auto"},
+    {"name": "reads", "class": "array:gtable", "type": "LetterReads", "label": "Reads", "help": "One or more Reads table objects that will be mapped to the reference genome."},
+    {"name": "output_name", "class": "string", "optional": true, "label": "Output name", "help": "The name of the resulting Mappings table object (optional; if not provided, the name will be based on the Reads name)."},
+    {"name": "reference", "class": "record", "type": {"$or": ["ContigSet", "BwaLetterContigSetV2"]}, "label": "Reference genome", "help": "The genome that the reads will be mapped against. (If this genome is not indexed for BWA, the app will automatically index it and include an indexed version in the output, for future use). DNAnexus provides several pre-indexed genomes in the 'Reference Genomes' public project."},
+    {"name": "algorithm", "class": "string", "default": "auto", "label": "Mapping algorithm", "help": "The mapping algorithm to use. Possible values are 'aln', 'bwasw' or 'auto'. See the app page for more information."},
     {"name": "aln_n", "class": "float", "optional": true},
     {"name": "aln_o", "class": "int", "optional": true},
     {"name": "aln_e", "class": "int", "optional": true},
@@ -41,12 +40,12 @@
     {"name": "sw_z", "class": "int", "optional": true},
     {"name": "sw_s", "class": "int", "optional": true},
     {"name": "sw_N", "class": "int", "optional": true},
-    {"name": "chunk_size", "class": "int", "default": 25000000},
-    {"name": "discard_unmapped_rows", "class": "boolean", "default": false}
+    {"name": "chunk_size", "class": "int", "default": 25000000, "label": "Reads per chunk", "help": "This app parallelizes itself by dividing the input into chunks of a certain size (a certain number of reads), and mapping each chunk individually. Lower chunk sizes lead to higher levels of parallelization, reducing the wall-clock time that one has to wait for the app to finish. However, lower chunks sizes may also increase the cost of running the app in the cloud, as they lead to a higher number of chunks, each of which adds a constant processing overhead. The default value is 25 million reads per chunk; DNAnexus suggests caution when experimenting with this parameter."},
+    {"name": "discard_unmapped_rows", "class": "boolean", "default": false, "label": "Discard unmapped rows?", "help": "If selected, unmapped reads will not be included in the Mappings output."}
   ],
   "outputSpec": [
-    {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings", "gri"]}},
-    {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV2"}
+    {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings", "gri"]}, "label": "Mappings", "help": "The resulting Mappings table object. (Developers can look at http://wiki.dnanexus.com/Types/Mappings for more information)."},
+    {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV2", "label": "Indexed reference genome", "help": "An indexed version of the reference genome, for future use as input to this app."}
   ],
   "runSpec": {
     "file": "bwa.py",
@@ -56,8 +55,7 @@
       {"name": "pypy"}
     ]
   },
-  "folder": "/bwa",
-  "version":"1.0.0",
+  "version":"1.0.1",
   "categories": ["Alignment"],
   "details": {
     "advancedInputs": [
