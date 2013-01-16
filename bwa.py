@@ -12,7 +12,7 @@ def run_shell(command):
 def make_indexed_reference(job_inputs):
     logging.info("Indexing reference genome")
 
-    run_shell("contigset2fasta %s reference.fasta" % job_inputs['reference']['$dnanexus_link'])
+    run_shell("dx-contigset-to-fasta %s reference.fasta" % job_inputs['reference']['$dnanexus_link'])
     ref_details = dxpy.DXRecord(job_inputs['reference']['$dnanexus_link']).get_details()
     ref_name = dxpy.DXRecord(job_inputs['reference']['$dnanexus_link']).describe()['name']
 
