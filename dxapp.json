@@ -95,7 +95,6 @@
       "chunk_size", 
       "discard_unmapped_rows"
     ],
-    "contactUrl": "http://wiki.dnanexus.com/Apps/bwa",
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus/bwa.git",
     "upstreamAuthor":"Heng Li and Richard Durbin",
