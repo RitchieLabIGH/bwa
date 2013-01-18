@@ -1,8 +1,11 @@
-Burrows-Wheeler Aligner (BWA) is an efficient program that aligns relatively short nucleotide sequences against a long reference sequence such as the human genome. This app runs BWA to map reads to a reference genome and produce mappings.
+Burrows-Wheeler Aligner (BWA) is an efficient program that aligns relatively
+short nucleotide sequences against a long reference sequence such as the human
+genome. This app runs BWA to map **letterspace** reads to a reference genome
+and produce mappings.
 
 **Inputs**:
 
-*Reads*: An array of Reads table objects that will be mapped to the reference genome. If more than one Reads objects are given in this array, the results are combined into a single Mappings output.
+*Reads*: An array of Reads table objects that will be mapped to the reference genome. If more than one Reads object is provided, the results are combined into a single Mappings output.
 
 *Output name*: The name of the resulting Mappings table object (optional; if not provided, the name will be based on the Reads name).
 
@@ -14,7 +17,7 @@ Burrows-Wheeler Aligner (BWA) is an efficient program that aligns relatively sho
 
 *Discard unmapped rows?*: If selected, unmapped reads will not be included in the Mappings output.
 
-*Low-level parameters*: Users familiar with the BWA executable can directly manipulate the parameters that are used for the `bwa aln`, `bwa samse`, `bwa sampe` and `bwa bwasw` calls. These parameters are: `aln_n`, `aln_o`, `aln_e`, `aln_i`, `aln_d`, `aln_l`, `aln_k`, `aln_m`, `aln_M`, `aln_O`, `aln_E`, `aln_R`, `aln_q`, `aln_N`, `sampe_a`, `sampe_o`, `sampe_n`, `sampe_N`, `sampe_c`, `sampe_s`, `samse_n`, `sw_a`, `sw_b`, `sw_q`, `sw_r`, `sw_w`, `sw_m`, `sw_T`, `sw_c`, `sw_z`, `sw_s`, `sw_N`. Each one of this parameters directly correspond to the respective command-line argument, i.e. `aln_o` corresponds to the `-o` option of `bwa aln` (maximum number of gap opens). Certain options, such as the `-t` option of `bwa aln`, are not exposed to users because they are set by the app, based on the kind of cloud environment that the app runs on.
+*Low-level parameters*: Users familiar with the BWA executable can directly manipulate the parameters that are used for the `bwa aln`, `bwa samse`, `bwa sampe` and `bwa bwasw` calls. These parameters are: `aln_n`, `aln_o`, `aln_e`, `aln_i`, `aln_d`, `aln_l`, `aln_k`, `aln_m`, `aln_M`, `aln_O`, `aln_E`, `aln_R`, `aln_q`, `aln_N`, `sampe_a`, `sampe_o`, `sampe_n`, `sampe_N`, `sampe_c`, `sampe_s`, `samse_n`, `sw_a`, `sw_b`, `sw_q`, `sw_r`, `sw_w`, `sw_m`, `sw_T`, `sw_c`, `sw_z`, `sw_s`, `sw_N`. Each one of this parameters directly correspond to the respective command-line argument, e.g. `aln_o` corresponds to the `-o` option of `bwa aln` (maximum number of gap opens). Certain options, such as the `-t` option of `bwa aln`, are not exposed to users because they are set by the app, based on the kind of cloud environment that the app runs on.
 
 **Outputs**:
 
