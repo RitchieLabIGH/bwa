@@ -1,7 +1,7 @@
 {
   "name": "bwa",
   "title": "BWA",
-  "summary": "Burrows-Wheeler Aligner",
+  "summary": "Maps reads to a reference genome using the Burrows-Wheeler Aligner",
   "dxapi": "1.0.0",
   "inputSpec": [
     {"name": "reads", "class": "array:gtable", "type": "LetterReads", "label": "Reads", "help": "One or more Reads table objects that will be mapped to the reference genome."},
