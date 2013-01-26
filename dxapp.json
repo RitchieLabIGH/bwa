@@ -6,7 +6,7 @@
   "inputSpec": [
     {"name": "reads", "class": "array:gtable", "type": "LetterReads", "label": "Reads", "help": "One or more Reads table objects that will be mapped to the reference genome."},
     {"name": "output_name", "class": "string", "optional": true, "label": "Output name", "help": "The name of the resulting Mappings table object (optional; if not provided, the name will be based on the Reads name)."},
-    {"name": "reference", "class": "record", "type": {"$or": ["ContigSet", "BwaLetterContigSetV2"]}, "label": "Reference genome", "help": "The genome that the reads will be mapped against. (If this genome is not indexed for BWA, the app will automatically index it and include an indexed version in the output, for future use). DNAnexus provides several pre-indexed genomes in the 'Reference Genomes' public project."},
+    {"name": "reference", "class": "record", "type": {"$or": ["ContigSet", "BwaLetterContigSetV3"]}, "label": "Reference genome", "help": "The genome that the reads will be mapped against. (If this genome is not indexed for BWA, the app will automatically index it and include an indexed version in the output, for future use). DNAnexus provides several pre-indexed genomes in the 'Reference Genomes' public project."},
     {"name": "algorithm", "class": "string", "default": "auto", "label": "Mapping algorithm", "help": "The mapping algorithm to use. Possible values are 'aln', 'bwasw' or 'auto'. See the app page for more information."},
     {"name": "aln_n", "class": "float", "optional": true},
     {"name": "aln_o", "class": "int", "optional": true},
@@ -45,7 +45,7 @@
   ],
   "outputSpec": [
     {"name": "mappings", "class": "gtable", "type": {"$and": ["LetterMappings", "Mappings", "gri"]}, "label": "Mappings", "help": "The resulting Mappings table object. (Developers can look at http://wiki.dnanexus.com/Types/Mappings for more information)."},
-    {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV2", "label": "Indexed reference genome", "help": "An indexed version of the reference genome, for future use as input to this app."}
+    {"name": "indexed_reference", "class": "record", "type": "BwaLetterContigSetV3", "label": "Indexed reference genome", "help": "An indexed version of the reference genome, for future use as input to this app."}
   ],
   "runSpec": {
     "file": "bwa.py",
@@ -55,7 +55,7 @@
       {"name": "pypy"}
     ]
   },
-  "version":"1.0.2",
+  "version":"1.0.3",
   "categories": ["Alignment"],
   "details": {
     "advancedInputs": [
@@ -98,7 +98,7 @@
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus/bwa.git",
     "upstreamAuthor":"Heng Li and Richard Durbin",
-    "upstreamVersion": "0.5.9-r16",
+    "upstreamVersion": "0.6.2-r126",
     "upstreamUrl": "http://bio-bwa.sourceforge.net/",
     "upstreamLicenses": ["GPLv3"],
     "citations": [

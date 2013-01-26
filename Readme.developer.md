@@ -4,9 +4,9 @@ Letterspace BWA Aligner, Developer Readme
 Introduction
 ------------
 
-This is an app that runs the BWA aligner (letterspace only, version 0.5.9-r16).
+This is an app that runs the BWA aligner (letterspace only, version 0.6.2-r126).
 
-The app defines a type called BwaLetterContigSetV2 which reflects an "indexed"
+The app defines a type called BwaLetterContigSetV3 which reflects an "indexed"
 genome in letterspace, appropriate for this version of the bwa. If such an
 "indexed" genome is given in the input, it will be used as-is; otherwise a
 (non-indexed) genome of type ContigSet must be given instead, and it will be
@@ -21,7 +21,7 @@ Input Spec
 <table>
 <tr><th>Name</th><th>Class/Type</th><th>Default</th></tr>
 <tr><td>reads</td><td>array of gtable of type:LetterReads</td><td>Mandatory</td></tr>
-<tr><td>reference</td><td>record of type:ContigSet<br>OR<br>record of type:BwaLetterContigSetV2</td><td>Mandatory</td></tr>
+<tr><td>reference</td><td>record of type:ContigSet<br>OR<br>record of type:BwaLetterContigSetV3</td><td>Mandatory</td></tr>
 <tr><td>algorithm</td><td>string ("auto", "aln", "bwasw")</td><td>"auto"</td></tr>
 <tr><td>discard_unmapped_rows</td><td>boolean</td><td>false</td></tr>
 <tr><td>aln_n</td><td>float</td><td></td></tr>
@@ -57,7 +57,7 @@ Input Spec
 </table>
 
 The app MUST receive in the "reads" parameter an array of LetterReads objects.
-The app MUST receive the in the "reference" parameter a record of type ContigSet or BwaLetterContigSetV2.
+The app MUST receive the in the "reference" parameter a record of type ContigSet or BwaLetterContigSetV3.
 
 The objects in the "reads" parameter MUST be homogeneous in terms of the
 presence of the quality column (either present in all or missing in all).
@@ -79,12 +79,12 @@ Output Spec
 -----------
 
 The app outputs an object of type LetterMappings containing the
-mappings, and an object of type BwaLetterContigSetV2.
+mappings, and an object of type BwaLetterContigSetV3.
 
 <table>
 <tr><th>Name</th><th>Class/Type</th></tr>
 <tr><td>mappings</td><td>gtable of type LetterMappings and Mappings and gri</td></tr>
-<tr><td>indexed_reference</td><td>record of type BwaLetterContigSetV2</td></tr>
+<tr><td>indexed_reference</td><td>record of type BwaLetterContigSetV3</td></tr>
 </table>
 
 Implementation
@@ -93,7 +93,7 @@ Implementation
 This section provides a sketch of the implementation, which may serve as
 inspiration for those writing their own alignment apps:
 
-* Validate all inputs (Reads, ContigSet, BwaLetterContigSetV2, etc.). Ensure
+* Validate all inputs (Reads, ContigSet, BwaLetterContigSetV3, etc.). Ensure
   that the reads are homogeneous with respect to the presence of the quality
   field. Ensure that the reads are LetterReads, etc.
 
@@ -101,7 +101,7 @@ inspiration for those writing their own alignment apps:
   (as fasta) and index it with either "bwa index -a is" (up to 2Gbases genome)
   or "bwa index -a bwtsw" (&gt;2Gbases genome). Tar and xzip the
   results (including the fasta) and upload it back to the platform; output
-  "indexed\_reference" as a record of type BwaLetterContigSetV2 with the following
+  "indexed\_reference" as a record of type BwaLetterContigSetV3 with the following
   fields: "index\_archive" linking to the file above, and "original\_contigset"
   linking to the original ContigSet from which it was created.
 

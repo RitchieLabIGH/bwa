@@ -26,7 +26,7 @@ def make_indexed_reference(job_inputs):
     indexed_ref_dxfile = dxpy.upload_local_file("reference.tar.xz", hidden=True, wait_on_close=True)
     
     indexed_ref_record = dxpy.new_dxrecord(name=ref_name + " (indexed for BWA)",
-                                           types=["BwaLetterContigSetV2"],
+                                           types=["BwaLetterContigSetV3"],
                                            details={'index_archive': dxpy.dxlink(indexed_ref_dxfile.get_id()),
                                                     'original_contigset': job_inputs['reference']})
     indexed_ref_record.close()
@@ -69,19 +69,19 @@ def main(**job_inputs):
     assert(all_reads_have_FlowReads_tag or all_reads_have_LetterReads_tag)
     
     reference_record_types = dxpy.describe(job_inputs['reference'])['types']
-    if "BwaLetterContigSetV2" in reference_record_types:
+    if "BwaLetterContigSetV3" in reference_record_types:
         input_ref_is_indexed = True
     elif "ContigSet" in reference_record_types:
         input_ref_is_indexed = False
     else:
-        raise dxpy.ProgramError("Unrecognized object passed as reference. It must be a ContigSet record or a BwaLetterContigSetV2 file")
+        raise dxpy.ProgramError("Unrecognized object passed as reference. It must be a ContigSet record or a BwaLetterContigSetV3 file")
     
     if input_ref_is_indexed:
         job_outputs['indexed_reference'] = job_inputs['reference']
     else:
         found_cached_idx = False
         for result in dxpy.find_data_objects(classname='record',
-                                             typename='BwaLetterContigSetV2',
+                                             typename='BwaLetterContigSetV3',
                                              link=job_inputs['reference']['$dnanexus_link']):
             job_outputs['indexed_reference'] = dxpy.dxlink(result['id'])
             found_cached_idx = True
