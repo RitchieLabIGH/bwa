@@ -1,0 +1,31 @@
+CLEANUP
+	* massive cleanup
+		* error handling
+		* signal handling
+		* globals
+	* autoconf
+	* optimized settings
+		* memory limit
+		* cpu number
+		* block size, for max threads on small files
+
+BUGS
+	* performance lags under IO?
+	* slow input -> CPUs idle while waiting for input
+	* safe extraction
+		* abort if block size exceeded
+
+EFFICIENCY
+	* more efficient indexing: ranges? sorted? mtree?
+	* circular buffer > linked list?
+
+DOCUMENTATION
+	* man pages
+	* command help
+
+FEATURES
+	* support multiple streams
+		* tarball append without decompression
+	* other archive formats: cpio?
+	* lzma-like API
+	* recovery tool (already is, kinda)
