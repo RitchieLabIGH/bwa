@@ -19,3 +19,10 @@ all:
 	$(MAKE) -C pixz
 	cp bwa/bwa resources/usr/bin/bwa
 	cp pixz/pixz resources/usr/bin/pixz
+
+clean:
+	$(MAKE) -C bwa clean
+	$(MAKE) -C pixz clean
+	rm -f resources/usr/bin/bwa resources/usr/bin/pixz
+
+.PHONY: all clean
