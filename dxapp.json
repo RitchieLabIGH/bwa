@@ -106,8 +106,8 @@
     "upstreamUrl": "http://bio-bwa.sourceforge.net/",
     "upstreamLicenses": ["GPLv3"],
     "citations": [
-        "doi:10.1093/bioinformatics/btp324",
-        "doi:10.1093/bioinformatics/btp698"
+      "doi:10.1093/bioinformatics/btp324",
+      "doi:10.1093/bioinformatics/btp698"
     ]
   }
 }
