@@ -59,8 +59,8 @@
       {"name": "liblzma-dev"}
     ]
   },
-  "version":"1.0.4",
-  "categories": ["Alignment"],
+  "version":"1.0.5",
+  "categories": ["Read Mapping"],
   "details": {
     "contactOrgs": ["org-dnanexus"],
     "repoUrl": "git@github.com:dnanexus/bwa.git",
