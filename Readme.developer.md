@@ -53,80 +53,85 @@ Implementation
 This section provides a sketch of the implementation, which may serve as
 inspiration for those writing their own alignment apps:
 
-* Validate all inputs (Reads, ContigSet, BwaLetterContigSetV3, etc.). Ensure
-  that the reads are homogeneous with respect to the presence of the quality
-  field. Ensure that the reads are LetterReads, etc.
+* Validate all inputs (Reads, ContigSet, BwaLetterContigSetV3, etc.).
+  Ensure that the reads are homogeneous with respect to the presence of the
+  quality field. Ensure that the reads are LetterReads, etc.
 
-* If the input reference is a ContigSet, fetch the genome from the "reference"
-  (as fasta) and index it with either "bwa index -a is" (up to 2Gbases genome)
-  or "bwa index -a bwtsw" (&gt;2Gbases genome). Tar and xzip the
-  results (including the fasta) and upload it back to the platform; output
-  "indexed\_reference" as a record of type BwaLetterContigSetV3 with the following
-  fields: "index\_archive" linking to the file above, and "original\_contigset"
-  linking to the original ContigSet from which it was created.
+* If the input reference is a ContigSet, fetch the genome from the
+  "reference" (as fasta) and index it with either "bwa index -a is" (up to
+  2Gbases genome) or "bwa index -a bwtsw" (&gt;2Gbases genome). Tar and
+  xzip the results (including the fasta) and upload it back to the
+  platform; output "indexed\_reference" as a record of type
+  BwaLetterContigSetV3 with the following fields: "index\_archive" linking
+  to the file above, and "original\_contigset" linking to the original
+  ContigSet from which it was created.
 
 * Determine the sets of columns that are required in the output -- for
-  LetterReads, these are: sequence (always), name (if at least one Reads object
-  has name), quality (if present), status, chr, lo, hi, negative\_strand,
-  error\_probability, qc, cigar, template\_id. If at least one Reads object is
-  paired: mate\_id, status2, chr2, lo2, hi2, negative\_strand2, proper\_pair.
-  Create a gtable with a genomic range index.
+  LetterReads, these are: sequence (always), name (if at least one Reads
+  object has name), quality (if present), status, chr, lo, hi,
+  negative\_strand, error\_probability, qc, cigar, template\_id. If at
+  least one Reads object is paired: mate\_id, status2, chr2, lo2, hi2,
+  negative\_strand2, proper\_pair. Create a gtable with a genomic range
+  index.
 
 * Align each of the objects in the "reads" input. Start by determining the
-  number of rows of each Reads input, and calculate an "offset template id".
-  The first reads object will be assigned an offset template id of 0, the
-  second reads object will be assigned an offset template id equal to the
-  number of rows in the first reads object, etc. For each Reads object R, do
-  the following:
+  number of rows of each Reads input, and calculate an "offset template
+  id". The first reads object will be assigned an offset template id of 0,
+  the second reads object will be assigned an offset template id equal to
+  the number of rows in the first reads object, etc. For each Reads object
+  R, do the following:
 
     * Decide on an appropriate chunk size to parallelize over. A good chunk
       might be 25M rows. For each chunk C, do the following:
 
-        * Convert the particular piece (chunk C of reads object R) into one or
-          two fasta or fastq files (say 1.fq and 2.fq), depending on whether
-          the input is paired or not and whether it has quality scores or not.
-          The conversion is as follows:
+        * Convert the particular piece (chunk C of reads object R) into one
+          or two fasta or fastq files (say 1.fq and 2.fq), depending on
+          whether the input is paired or not and whether it has quality
+          scores or not. The conversion is as follows:
 
-            * Original read names are ignored. Instead, for read names, use a
-              number representing the row index in R that the entry corresponds
-              to. Thus, read names are expected to be "1", "2", "3" etc.
+            * Original read names are ignored. Instead, for read names, use
+              a number representing the row index in R that the entry
+              corresponds to. Thus, read names are expected to be "1", "2",
+              "3" etc.
 
-            * Paired reads are named in the same way, but with "/1" and "/2"
-              appended to the name for the first and second mate, respectively.
+            * Paired reads are named in the same way, but with "/1" and
+              "/2" appended to the name for the first and second mate,
+              respectively.
 
-            * The sequence is taken from the "sequence" and "sequence2" fields
+            * The sequence is taken from the "sequence" and "sequence2"
+              fields
 
             * The quality is taken from the "quality" field. If there isn't
               such a field, output a fasta instead.
 
-        * Fetch and extract the indexed\_reference (either from the input, or
-          from the one generated at the earlier step)
+        * Fetch and extract the indexed\_reference (either from the input,
+          or from the one generated at the earlier step)
 
         * If the "aln" algorithm is chosen, call "bwa aln" on 1.fq (and,
-          separately, "bwa aln" on 2.fq, if paired), followed by "bwa samse"
-          or "bwa sampe" (if paired). The result will be a sam file, sorted by
-          read index.
+          separately, "bwa aln" on 2.fq, if paired), followed by "bwa
+          samse" or "bwa sampe" (if paired). The result will be a sam file,
+          sorted by read index.
 
-        * If the "bwasw" algorithm is chosen, call "bwa bwasw" (on 1.fq, or on
-          "1.fq 2.fq" if paired; either way it is run only once). The result
-          will be a sam file, sorted by read index.
+        * If the "bwasw" algorithm is chosen, call "bwa bwasw" (on 1.fq, or
+          on "1.fq 2.fq" if paired; either way it is run only once). The
+          result will be a sam file, sorted by read index.
 
-        * Start reading (streaming) in parallel from the sam file and from the
-          chunk C of the Reads object R. These should correspond, as the sam
-          file is expected to be sorted by read index and contain exactly the
-          information as to how reads in C were mapped. For each row Q in C, do
-          the following:
+        * Start reading (streaming) in parallel from the sam file and from
+          the chunk C of the Reads object R. These should correspond, as
+          the sam file is expected to be sorted by read index and contain
+          exactly the information as to how reads in C were mapped. For
+          each row Q in C, do the following:
 
             * Consume all the consecutive rows S in the sam file that
               correspond to the row Q in C. It could be one or more rows
-              depending on whether the row Q in C represents paired input or
-              not. It should be easy to figure out which rows to consume from
-              the sam file, because the read names contain the row indices of
-              the rows in C.
+              depending on whether the row Q in C represents paired input
+              or not. It should be easy to figure out which rows to consume
+              from the sam file, because the read names contain the row
+              indices of the rows in C.
 
             * Process the set S of rows, and the row Q, and push some
-              respective info to the output mappings. More specifically, fill
-              in the following values:
+              respective info to the output mappings. More specifically,
+              fill in the following values:
 
                 * name, sequence, quality, flowgram, flow\_indices,
                   clip\_qual\_left, clip\_qual\_right, clip\_adapter\_left, and
