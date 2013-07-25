@@ -4,88 +4,48 @@ Letterspace BWA Aligner, Developer Readme
 Introduction
 ------------
 
-This is an app that runs the BWA aligner (letterspace only, version 0.6.2-r126).
+This app runs the BWA aligner (letterspace only, version 0.6.2-r126).
 
-The app defines a type called BwaLetterContigSetV3 which reflects an "indexed"
-genome in letterspace, appropriate for this version of the bwa. If such an
-"indexed" genome is given in the input, it will be used as-is; otherwise a
-(non-indexed) genome of type ContigSet must be given instead, and it will be
-indexed.
+The app defines a type called BwaLetterContigSetV3 which represents an
+indexed genome in letterspace, appropriate for this version of the bwa. If
+such an indexed genome is given in the input, it will be used as-is;
+otherwise a (non-indexed) genome of type ContigSet must be given instead,
+and it will be indexed.
 
-The app receives an array of LetterReads objects, which may be heterogeneous. These
-are expected to be mapped and represented in a single output of type Mappings.
+The app receives an array of LetterReads objects, which may be
+heterogeneous. These will be mapped and represented in a single output of
+type Mappings.
 
-Input Spec
-----------
+Inputs
+------
 
-<table>
-<tr><th>Name</th><th>Class/Type</th><th>Default</th></tr>
-<tr><td>reads</td><td>array of gtable of type:LetterReads</td><td>Mandatory</td></tr>
-<tr><td>reference</td><td>record of type:ContigSet<br>OR<br>record of type:BwaLetterContigSetV3</td><td>Mandatory</td></tr>
-<tr><td>algorithm</td><td>string ("auto", "aln", "bwasw")</td><td>"auto"</td></tr>
-<tr><td>discard_unmapped_rows</td><td>boolean</td><td>false</td></tr>
-<tr><td>aln_n</td><td>float</td><td></td></tr>
-<tr><td>aln_o</td><td>int</td><td></td></tr>
-<tr><td>aln_e</td><td>int</td><td></td></tr>
-<tr><td>aln_i</td><td>int</td><td></td></tr>
-<tr><td>aln_d</td><td>int</td><td></td></tr>
-<tr><td>aln_l</td><td>int</td><td></td></tr>
-<tr><td>aln_k</td><td>int</td><td></td></tr>
-<tr><td>aln_m</td><td>int</td><td></td></tr>
-<tr><td>aln_M</td><td>int</td><td></td></tr>
-<tr><td>aln_O</td><td>int</td><td></td></tr>
-<tr><td>aln_E</td><td>int</td><td></td></tr>
-<tr><td>aln_R</td><td>int</td><td></td></tr>
-<tr><td>aln_q</td><td>int</td><td></td></tr>
-<tr><td>sampe_a</td><td>int</td><td></td></tr>
-<tr><td>sampe_o</td><td>int</td><td></td></tr>
-<tr><td>sampe_n</td><td>int</td><td></td></tr>
-<tr><td>sampe_N</td><td>int</td><td></td></tr>
-<tr><td>sampe_c</td><td>float</td><td></td></tr>
-<tr><td>sw_a</td><td>int</td><td></td></tr>
-<tr><td>sw_b</td><td>int</td><td></td></tr>
-<tr><td>sw_q</td><td>int</td><td></td></tr>
-<tr><td>sw_r</td><td>int</td><td></td></tr>
-<tr><td>sw_w</td><td>int</td><td></td></tr>
-<tr><td>sw_m</td><td>float</td><td></td></tr>
-<tr><td>sw_T</td><td>int</td><td></td></tr>
-<tr><td>sw_c</td><td>float</td><td></td></tr>
-<tr><td>sw_z</td><td>int</td><td></td></tr>
-<tr><td>sw_s</td><td>int</td><td></td></tr>
-<tr><td>sw_N</td><td>int</td><td></td></tr>
-<tr><td>chunk_size</td><td>int</td><td>25000000</td></tr>
-</table>
-
-The app MUST receive in the "reads" parameter an array of LetterReads objects.
-The app MUST receive the in the "reference" parameter a record of type ContigSet or BwaLetterContigSetV3.
+The app MUST receive in the "reads" parameter an array of LetterReads
+objects. The app MUST receive the in the "reference" parameter a record of
+type ContigSet or BwaLetterContigSetV3.
 
 The objects in the "reads" parameter MUST be homogeneous in terms of the
 presence of the quality column (either present in all or missing in all).
 
-The app can be given the algorithm to run ("aln" or "bwasw"); it will choose
-automatically if algorithm is set to "auto". If the app ends up using the "aln"
-algorithm (either because that was set in the input, or because that was chosen
-by the app in the case of "auto"), it will use any options specified in the
-aln\_* and sampe\_* (for paired inputs) parameters. If the app ends up using
-the "bwasw" algorithm, it will use any options specified in the sw\_*
-parameters. The aln\_\*, sampe\_* and sw\_* parameters reflect precisely the
-arguments that the "bwa aln", "bwa sampe" and "bwa bwasw" commands can take.
+The app can be given the algorithm to run ("aln" or "bwasw"); it will
+choose automatically if algorithm is set to "auto". If the app ends up
+using the "aln" algorithm (either because that was set in the input, or
+because that was chosen by the app in the case of "auto"), it will use any
+options specified in the aln\_* and sampe\_* (for paired inputs)
+parameters. If the app ends up using the "bwasw" algorithm, it will use any
+options specified in the sw\_* parameters. The aln\_\*, sampe\_* and sw\_*
+parameters reflect precisely the arguments that the "bwa aln", "bwa sampe"
+and "bwa bwasw" commands can take.
 
-This app parallelizes itself into using multiple mapping jobs. The chunk\_size argument governs
-the maximum number of reads per mapping job launched by the map. It is optional and
-should not need modification in normal operation.
+This app parallelizes itself into using multiple mapping jobs. The
+chunk\_size argument governs the maximum number of reads per mapping job
+launched by the map. It is optional and should not need modification in
+normal operation.
 
-Output Spec
------------
+Outputs
+-------
 
-The app outputs an object of type LetterMappings containing the
-mappings, and an object of type BwaLetterContigSetV3.
-
-<table>
-<tr><th>Name</th><th>Class/Type</th></tr>
-<tr><td>mappings</td><td>gtable of type LetterMappings and Mappings and gri</td></tr>
-<tr><td>indexed_reference</td><td>record of type BwaLetterContigSetV3</td></tr>
-</table>
+The app outputs an object of type LetterMappings containing the mappings,
+and an object of type BwaLetterContigSetV3.
 
 Implementation
 --------------
