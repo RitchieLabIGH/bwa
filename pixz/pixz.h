@@ -16,17 +16,30 @@
 #define PIXZ_INDEX_MAGIC 0xDBAE14D62E324CA6LL
 
 #define CHECK LZMA_CHECK_CRC32
-#define MEMLIMIT (64L * 1024 * 1024 * 1024) // crazy high
+#define MEMLIMIT (64ULL * 1024 * 1024 * 1024) // crazy high
 
 #define CHUNKSIZE 4096
 
-#define DEBUG 0
+#ifndef DEBUG
+	#define DEBUG 0
+#endif
 #if DEBUG
     #define debug(str, ...) fprintf(stderr, str "\n", ##__VA_ARGS__)
 #else
     #define debug(...)
 #endif
 
+
+#pragma mark LIBARCHIVE CHANGES
+
+#include <archive.h>
+#if ARCHIVE_VERSION_NUMBER >= 3000000
+	#define prevent_compression(a) archive_read_support_filter_none(a)
+	#define finish_reading(a) archive_read_free(a)
+#else
+	#define prevent_compression(a) archive_read_support_compression_none(a)
+	#define finish_reading(a) archive_read_finish(a)
+#endif
 
 #pragma mark OPERATIONS
 
@@ -50,7 +63,7 @@ uint64_t xle64dec(const uint8_t *d);
 void xle64enc(uint8_t *d, uint64_t n);
 size_t num_threads(void);
 
-void *decode_block_start(off_t block_seek);
+extern double gBlockFraction;
 
 
 #pragma mark INDEX
@@ -64,14 +77,10 @@ struct file_index_t {
 
 extern file_index_t *gFileIndex, *gLastFile;
 
-// As discovered from footer
-extern lzma_check gCheck;
-
 bool is_multi_header(const char *name);
-void decode_index(void);
+bool decode_index(void); // true on success
 
-lzma_vli find_file_index(void **bdatap);
-lzma_vli read_file_index(lzma_vli offset);
+lzma_vli read_file_index(void);
 void dump_file_index(FILE *out, bool verbose);
 void free_file_index(void);
 
@@ -106,6 +115,8 @@ int queue_pop(queue_t *q, void **datap);
 
 #pragma mark PIPELINE
 
+extern size_t gPipelineQSize;
+extern size_t gPipelineProcessMax;
 extern queue_t *gPipelineStartQ, *gPipelineSplitQ, *gPipelineMergeQ;
 
 typedef enum {
@@ -134,5 +145,6 @@ void pipeline_create(
 void pipeline_stop(void);
 void pipeline_destroy(void);
 
+void pipeline_dispatch(pipeline_item_t *item, queue_t *q);
 void pipeline_split(pipeline_item_t *item);
 pipeline_item_t *pipeline_merged();

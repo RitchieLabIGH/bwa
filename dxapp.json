@@ -59,7 +59,7 @@
       {"name": "liblzma-dev"}
     ]
   },
-  "version": "1.0.7",
+  "version": "1.0.8",
   "categories": ["Read Mapping"],
   "details": {
     "contactOrgs": ["org-dnanexus"],
